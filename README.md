@@ -8,10 +8,10 @@
 
 | Field | Value |
 |---|---|
-| **Team Name** | [Your Team Name] |
+| **Team Name** | [Four-Pointers] |
 | **Track** | [AI / DevOps / Sustainability / Open] |
-| **Team Lead** | [Name] — [email@ibm.com] |
-| **Members** | [Name 1], [Name 2], [Name 3] |
+| **Team Lead** | [Hetraj Rana] — [ranahetraj@gmail.com] |
+| **Members** | [Aaryan Patel], [Dhruv Gajera], [Hit Goyani] |
 
 ---
 
