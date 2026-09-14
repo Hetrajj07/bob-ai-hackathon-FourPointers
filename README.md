@@ -1,4 +1,4 @@
-# 🚀 [Your Project Title Here]
+# 🚀 Bob AI Hackathon Submission
 
 > ⚠️ **Replace everything in `[ ]` brackets with your actual content before submission.**
 
