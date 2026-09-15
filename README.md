@@ -11,7 +11,7 @@ ThreatFusion turns fragmented cyber observations into evidence-backed attack hyp
 | Team Name | Four-Pointers |
 | Track | AI |
 | Team Lead | Hetraj Rana — ranahetraj@gmail.com |
-| Members | Aaryan Patel (patel.aaryan336@gmail.com) · Dhruv Gajera (dhruvgajera39@gmail.com) · Hit Goyani (hitgoyani01@gmai.com) |
+| Members | Aaryan Patel (patel.aaryan336@gmail.com) · Dhruv Gajera (dhruvgajera39@gmail.com) · Hit Goyani (hitgoyani01@gmail.com) |
 
 ## Problem Statement
 
