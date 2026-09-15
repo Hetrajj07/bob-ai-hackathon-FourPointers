@@ -1,0 +1,6 @@
+{
+  "ENG-DB01": {"criticality": 95, "mission_role": "Engineering database", "zone": "mission-critical"},
+  "ENG-WKS17": {"criticality": 82, "mission_role": "Engineering workstation", "zone": "engineering"},
+  "VPN-GW01": {"criticality": 90, "mission_role": "Remote access gateway", "zone": "perimeter"},
+  "FIN-LT22": {"criticality": 58, "mission_role": "Finance endpoint", "zone": "corporate"}
+}

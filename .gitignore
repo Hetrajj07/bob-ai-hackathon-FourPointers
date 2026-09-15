@@ -78,12 +78,14 @@ desktop.ini
 
 # ── Large Media Files (use demo-video-link.txt instead) ───────────────────────
 demo/*.mp4
+!demo/ThreatFusion_demo.mp4
 demo/*.mov
 demo/*.avi
 demo/*.mkv
 
 # ── Docker volumes / local data ───────────────────────────────────────────────
-data/
+/data/
+!src/data/
 logs/
 *.log
 

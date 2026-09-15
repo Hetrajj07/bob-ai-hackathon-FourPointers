@@ -1,69 +1,56 @@
-# =============================================================================
-# HACKATHON SUBMISSION METADATA
-# =============================================================================
-# Instructions:
-#   - Fill in ALL required fields (marked with # REQUIRED)
-#   - Optional fields can be left as empty strings ""
-#   - Do NOT rename this file — the evaluation pipeline reads it by name
-#   - Use double quotes around all string values
-# =============================================================================
-
 team:
-  name: ""                             # REQUIRED — e.g., "Orion Squad"
-  track: ""                            # REQUIRED — one of: AI | DevOps | Sustainability | Open
+  name: "Four-Pointers"
+  track: "AI"
   lead:
-    name: ""                           # REQUIRED — e.g., "Alice Chen"
-    email: ""                          # REQUIRED — e.g., "alice.chen@ibm.com"
+    name: "Hetraj Rana"
+    email: "ranahetraj@gmail.com"
   members:
-    - name: ""                         # REQUIRED — Team member 1
-      email: ""
-    - name: ""                         # Add more members by copying the two lines above
-      email: ""
-    - name: ""
-      email: ""
+    - name: "Aaryan Patel"
+      email: "patel.aaryan336@gmail.com"
+    - name: "Dhruv Gajera"
+      email: "dhruvgajera39@gmail.com"
+    - name: "Hit Goyani"
+      email: "24dit021@charusat.edu.in"
 
 submission:
-  title: ""                            # REQUIRED — Project display name, e.g., "SmartOps Dashboard"
-
-  problem_statement: >                 # REQUIRED — 1-3 sentences. What problem? Who has it?
-    Replace this text with a concise description of the real-world problem
-    your project addresses and who experiences it.
-
-  solution_summary: >                  # REQUIRED — 1-3 sentences. What did you build?
-    Replace this text with a clear description of your solution
-    and how it addresses the problem above.
-
-  key_features:                        # REQUIRED — List 3 to 5 specific features you implemented
-    - ""                               # e.g., "Real-time pipeline anomaly detection using watsonx.ai"
-    - ""
-    - ""
-    - ""                               # optional 4th
-    - ""                               # optional 5th
-
+  title: "ThreatFusion — Evidence-Backed Threat Intelligence Correlation"
+  problem_statement: >
+    Defence analysts receive heterogeneous SIEM, cyber-sensor and intelligence observations
+    that are difficult to correlate without over-grouping routine activity. ThreatFusion
+    validates candidate incident hypotheses against behavioral evidence, ATT&CK context and
+    attack-flow coherence before prioritizing them for investigation and command briefing.
+  solution_summary: >
+    ThreatFusion normalizes four source schemas, performs weighted temporal/entity correlation,
+    infers ATT&CK sub-techniques, measures attack-flow coherence, and separates evidence confidence,
+    threat severity, mission impact and urgency. IBM Bob accesses grounded investigation tools through
+    MCP and generates commander-ready BLUFs without calculating or inventing the underlying evidence.
+  key_features:
+    - "Evidence-weighted multi-source candidate correlation with temporal decay and source independence"
+    - "Auditable MITRE ATT&CK technique/sub-technique inference with provenance"
+    - "Attack-flow coherence plus negative evidence and telemetry uncertainty"
+    - "Explainable confidence, threat severity, mission impact and urgency scoring"
+    - "IBM Bob MCP investigation workflow with /investigate, /explain, /bluf and /runbook"
   tech_stack:
-    languages: []                      # REQUIRED — e.g., ["Python", "TypeScript"]
-    frameworks: []                     # e.g., ["FastAPI", "React"]
-    ibm_technologies: []               # e.g., ["watsonx.ai", "IBM Bob", "IBM Cloud Functions"]
-    databases: []                      # e.g., ["PostgreSQL", "Redis"]
-    other: []                          # e.g., ["Docker", "GitHub Actions", "Slack API"]
+    languages: ["Python", "JavaScript", "HTML", "CSS"]
+    frameworks: ["FastAPI", "Uvicorn"]
+    ibm_technologies: ["IBM Bob", "IBM Bob MCP workflow"]
+    databases: ["Versioned JSON reference/data"]
+    other: ["MITRE ATT&CK v19.2", "pytest", "JSON-RPC 2.0 over stdio"]
+  what_we_are_most_proud_of: >
+    We do not promote a shared-entity cluster directly into an incident. The engine separates
+    candidate hypotheses from incident promotion and requires ATT&CK evidence, coherent behavior,
+    corroboration and contextual impact. Runtime scoring never reads the benchmark ground truth.
+  known_limitations: >
+    The prototype uses synthetic telemetry and a bundled ATT&CK reference snapshot. It is an
+    evidence-backed hackathon prototype with production-oriented architecture, not a production SOC,
+    and does not perform autonomous containment or real actor attribution. Hosted video link is
+    pending external upload prior to final submission.
 
-  what_we_are_most_proud_of: >         # Optional but recommended — guides judges to your best work
-    Replace with what aspect of the submission you consider strongest
-    and want judges to pay special attention to.
-
-  known_limitations: >                 # Optional but recommended — be honest about gaps
-    Replace with any known limitations, incomplete features,
-    or shortcuts taken due to time constraints.
-
-# =============================================================================
-# ARTIFACT LOCATIONS
-# These paths are relative to the repo root. Only change if you moved files.
-# =============================================================================
 artifacts:
   source_code: "src/"
   setup_guide: "docs/setup-guide.md"
   architecture_doc: "docs/architecture.md"
-  demo_video: "demo/demo-video-link.txt"   # URL to hosted video (YouTube, Loom, Box)
-  live_demo: "demo/live-demo-url.txt"      # URL to deployed demo (optional)
+  demo_video: "demo/demo-video-link.txt"
+  live_demo: "demo/live-demo-url.txt"
   screenshots: "demo/screenshots/"
   presentation: "presentation/"

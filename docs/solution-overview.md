@@ -2,40 +2,53 @@
 
 ## What We Built
 
-[Describe your solution in plain language. Avoid jargon — write as if explaining to a smart colleague unfamiliar with your tech stack.]
+**ThreatFusion** is an evidence-backed D2 intelligence assistant that turns fragmented observations into prioritized incident hypotheses. It is designed around a simple rule: a correlation is not automatically an incident; an incident must earn promotion through corroborated behavioral evidence.
 
 ## How It Works
 
-[Explain the core mechanism step by step. A numbered list or simple flow works well here.]
+1. **Normalize** SIEM, endpoint, network-sensor and threat-intelligence records into one canonical event shape.
+2. **Cluster candidates** with relationship-specific entity weights and continuous temporal decay.
+3. **Enrich evidence** with ATT&CK technique/sub-technique inference and source provenance.
+4. **Validate behavior** with tactic progression, technique depth, source independence and explicit contradiction/negative evidence.
+5. **Assess decision dimensions** separately: evidence confidence, threat severity, mission impact and urgency.
+6. **Promote only evidence-backed hypotheses** to incidents; runtime never reads benchmark labels.
+7. **Brief the analyst/commander** through the web dashboard and IBM Bob MCP tools.
 
-1. [Step 1: e.g., "User connects their GitHub repository via OAuth"]
-2. [Step 2: e.g., "The system ingests pipeline logs and feeds them to watsonx.ai"]
-3. [Step 3: e.g., "An anomaly score is computed and displayed on the dashboard"]
-4. [Step 4: e.g., "Alerts are sent to Slack when the score exceeds a threshold"]
+## What Makes It Different
 
-## Architecture Diagram
+A naïve implementation treats a shared host/IP/time window as an incident. ThreatFusion treats that as a **candidate hypothesis** and then asks whether the evidence forms a coherent attack story. This reduces the risk of promoting normal shared infrastructure activity merely because it is temporally close.
 
-> See [`architecture.md`](architecture.md) for the detailed diagram.
+## Example
 
-[Optionally include a simple ASCII or Mermaid diagram here for quick reference.]
-
+```text
+37 observations
+   ↓
+2 candidate hypotheses
+   ↓
+ATT&CK + attack-flow validation
+   ↓
+1 promoted incident
+   ↓
+P1 decision brief
 ```
-[User] → [Frontend: React] → [API: FastAPI] → [watsonx.ai] → [Dashboard]
-                                    ↓
-                             [PostgreSQL DB]
-```
+
+These numbers describe the bundled synthetic demo only.
+
+## IBM Bob Integration
+
+IBM Bob is not used to invent the threat score. Bob retrieves grounded incident evidence through the project MCP server and can execute the D2 investigation workflow through `/investigate`, `/explain` and `/bluf`. The deterministic engine remains the source of truth for scores and evidence.
 
 ## Key Design Decisions
 
 | Decision | Rationale |
 |---|---|
-| [e.g., Used watsonx.ai for anomaly detection] | [e.g., Pre-trained models reduced time-to-value vs. building from scratch] |
-| [Decision 2] | [Rationale 2] |
-| [Decision 3] | [Rationale 3] |
+| Candidate clustering before promotion | Prevents shared-entity over-correlation from becoming an incident automatically. |
+| Explicit IOC semantics | Prevents every public IP from being treated as malicious. |
+| ATT&CK sub-techniques | Provides finer behavioral precision and avoids over-broad labels. |
+| Separate confidence/severity/impact/urgency | Makes prioritization explainable and reflects different dimensions of operational risk. |
+| Negative evidence + uncertainty | Lets the system express “not enough evidence” rather than forcing benign/malicious certainty. |
+| Actor similarity, not attribution | Historical technique overlap is useful context but is insufficient for definitive attribution. |
 
-## IBM Technologies Used
+## Limitations
 
-[Explain specifically HOW you used each IBM technology — not just that you used it.]
-
-- **[IBM Tech 1, e.g., watsonx.ai]:** [How it was used — e.g., "Used the `ibm/granite-13b-instruct-v2` model via the Python SDK to classify anomaly types from log text."]
-- **[IBM Tech 2]:** [How it was used]
+The prototype uses synthetic telemetry and a bundled ATT&CK snapshot. The correlation stage is intentionally designed for a small reproducible dataset. It is not a production detection platform and does not autonomously execute defensive actions.

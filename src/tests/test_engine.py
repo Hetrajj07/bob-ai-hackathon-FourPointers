@@ -1,0 +1,71 @@
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+ROOT = Path(__file__).resolve().parents[1]
+from threatfusion.engine import analyze, normalize, tag_technique, promoted_incidents, bluf, remediation_runbook, temporal_decay, negative_evidence
+
+
+def test_runtime_does_not_promote_from_ground_truth():
+    d = analyze(ROOT.parent)
+    assert d["metadata"]["ground_truth_used_for_runtime"] is False
+    assert len(promoted_incidents(d)) == 1
+
+
+def test_real_incident_uses_precise_attack_subtechniques():
+    d = analyze(ROOT.parent)
+    incident = promoted_incidents(d)[0]
+    tids = [e["technique"] for e in incident["techniques"]]
+    assert "T1566.001" in tids
+    assert "T1059.001" in tids
+    assert "T1003.001" in tids
+    assert "T1021.001" in tids
+
+
+def test_public_ip_is_not_automatically_an_ioc():
+    raw = {"_id":"X", "timestamp":"2026-09-15T00:00:00Z", "source":"network_sensor", "dst_ip":"52.55.10.23"}
+    n = normalize(raw)
+    assert ("ioc", "52.55.10.23") not in n["entities"]
+    assert ("ip", "52.55.10.23") in n["entities"]
+
+
+def test_rdp_requires_rdp_evidence():
+    techniques = {"T1021.001":{"name":"Remote Desktop Protocol","tactics":["lateral-movement"]}}
+    bad = {"timestamp":"2026-09-15T00:00:00Z","source":"siem","event_type":"remote_logon","detail":"unexpected login"}
+    good = {"timestamp":"2026-09-15T00:00:00Z","source":"siem","event_type":"remote_logon","protocol":"RDP","dst_port":3389}
+    assert tag_technique(bad, techniques)[0] is None
+    assert tag_technique(good, techniques)[0] == "T1021.001"
+
+
+def test_bluf_has_uncertainty_language():
+    d = analyze(ROOT.parent)
+    b = bluf(promoted_incidents(d)[0])
+    assert "not attribution" in b["actor_assessment"]
+    assert b["recommended_actions"]
+
+
+def test_remediation_runbook_contains_phased_actions():
+    d = analyze(ROOT.parent)
+    incident = promoted_incidents(d)[0]
+    rb = incident.get("runbook") or remediation_runbook(incident)
+    assert len(rb) >= 3
+    phases = {step["phase"] for step in rb}
+    assert "Containment" in phases
+    assert "Eradication" in phases
+
+
+def test_temporal_decay_continuous_curve():
+    assert temporal_decay(0.0) == 1.0
+    assert 0.35 < temporal_decay(30.0, tau=30.0) < 0.38
+    assert temporal_decay(90.0, tau=30.0) < 0.06
+
+
+def test_negative_evidence_penalties():
+    cluster = [
+        {"id": "TEST-01", "raw": {"event_type": "antivirus_scan_clean"}},
+        {"id": "TEST-02", "raw": {"detail": "routine maintenance by known admin"}},
+    ]
+    negs = negative_evidence(cluster)
+    assert len(negs) == 2
+    factors = [n["factor"] for n in negs]
+    assert "clean antivirus result" in factors
+    assert "approved administrative context" in factors

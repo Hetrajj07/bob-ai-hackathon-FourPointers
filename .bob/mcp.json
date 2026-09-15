@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "threatfusion": {
+      "command": "python",
+      "args": ["src/mcp_server.py"],
+      "cwd": "${workspaceFolder}",
+      "disabled": false
+    }
+  }
+}

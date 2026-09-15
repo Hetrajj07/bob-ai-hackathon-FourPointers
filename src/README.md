@@ -1,47 +1,13 @@
-# Source Code
+# ThreatFusion source
 
-Place all your project's source code in this folder.
+`src/` contains the runnable D2 vertical slice.
 
-## Structure Guidelines
+- `app.py` — FastAPI dashboard and read-only API.
+- `mcp_server.py` — local STDIO MCP server for IBM Bob.
+- `evaluate.py` — offline benchmark; never used by runtime promotion.
+- `threatfusion/engine.py` — normalization, candidate clustering, ATT&CK mapping, attack-flow analysis, risk and BLUF.
+- `data/` — synthetic telemetry, benchmark labels, and demo asset context.
+- `reference/` — bundled ATT&CK/group extracts.
+- `tests/` — deterministic regression tests.
 
-Organize your code logically. Here are common patterns — use whatever fits
-your project:
-
-### Web Application
-```
-src/
-  backend/        ← API server code
-  frontend/       ← UI code
-  shared/         ← Shared utilities/types
-```
-
-### Data / AI Project
-```
-src/
-  data/           ← Data ingestion / preprocessing
-  models/         ← ML model code
-  api/            ← Serving layer
-  notebooks/      ← Jupyter notebooks (exploration)
-```
-
-### CLI / Script-based Tool
-```
-src/
-  cli/            ← CLI entry points
-  lib/            ← Core logic
-  utils/          ← Helpers
-```
-
-## Important Files to Include
-
-- `requirements.txt` or `package.json` — dependency manifest
-- `.env.example` — template for environment variables (NEVER commit `.env`)
-- Any database migration files
-- Configuration files
-
-## What NOT to Include in src/
-
-- `.env` files with real secrets
-- Large binary files (use Git LFS or link externally)
-- `node_modules/` or `venv/` (these are in `.gitignore`)
-- Build artifacts (`dist/`, `build/`, `__pycache__/`)
+The runtime path does **not** load `ground_truth.json`. It is intentionally isolated to the offline evaluation script.

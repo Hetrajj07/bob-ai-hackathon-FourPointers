@@ -2,20 +2,22 @@
 
 ## Background
 
-[Describe the broader context. What domain or industry does this problem belong to? What situation creates the problem?]
+D2 asks teams to address a defence-intelligence problem: analysts receive large volumes of security alerts, cyber-sensor observations, satellite/intelligence feeds and intelligence reports in different formats. The challenge is not merely to display those alerts, but to correlate evidence, reduce false positives, map adversary behavior to MITRE ATT&CK and produce a prioritised BLUF for commanders.
 
 ## The Problem
 
-[State the problem clearly and specifically. Avoid vague statements like "things are slow" — instead say "Operations teams spend an average of 45 minutes per incident diagnosing pipeline failures because logs are scattered across 6 different tools."]
+A single attacker action may appear as several weak signals across independent systems. Conversely, ordinary administrative activity can share common entities such as a host, user or process and look connected when it is not. A useful assistant must therefore form **candidate hypotheses first**, then promote only those supported by coherent behavioral evidence and corroboration.
 
 ## Who is Affected
 
-[Describe the specific user or persona experiencing this problem. Be concrete — not "developers" but "backend engineers managing CI/CD pipelines in enterprises with 50+ microservices."]
+- Defence/SOC analysts triaging high-volume heterogeneous telemetry.
+- Threat-intelligence analysts connecting indicators and adversary behavior.
+- Commanders who need a decision-ready summary rather than a raw alert queue.
 
 ## Why It Matters
 
-[What is the cost of this problem? Lost time? Revenue? Safety risk? Frustration? Quantify if possible.]
+The official D2 statement highlights the operational cost of thousands of daily alerts and the danger of both missed genuine threats and wasted investigation effort. Our prototype focuses on the decision point immediately before escalation: which observations form a credible incident, why, and what should happen next.
 
-## Why Existing Solutions Fall Short
+## Why Existing Approaches Fall Short
 
-[Briefly explain what people currently do and why it doesn't fully solve the problem. This sets up why your solution is needed.]
+Simple rules such as “same host + same time window” over-correlate noisy activity. A single opaque AI score is also difficult to audit. ThreatFusion separates candidate clustering from incident promotion and decomposes priority into evidence confidence, threat severity, mission impact and urgency.

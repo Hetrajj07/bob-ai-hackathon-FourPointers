@@ -1,0 +1,352 @@
+[
+  {
+    "source": "network_sensor",
+    "format": "json",
+    "timestamp": "2026-09-15T08:04:00Z",
+    "src_ip": "10.10.20.14",
+    "dst_ip": "185.214.66.91",
+    "dst_port": 443,
+    "protocol": "HTTPS",
+    "host": "ENG-WKS17",
+    "_id": "REC-0004"
+  },
+  {
+    "source": "siem",
+    "format": "json",
+    "timestamp": "2026-09-15T09:56:00Z",
+    "event_type": "file_download",
+    "user": "abasu",
+    "host": "CORP-020",
+    "_id": "REC-0033"
+  },
+  {
+    "source": "siem",
+    "format": "json",
+    "timestamp": "2026-09-15T08:02:00Z",
+    "event_type": "email_attachment_opened",
+    "user": "jsharma",
+    "host": "ENG-WKS17",
+    "detail": "winword.exe opened attachment invoice_Q3.docm",
+    "_id": "REC-0002"
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T09:58:00Z",
+    "host": "CORP-019",
+    "process": "excel.exe",
+    "parent_process": "explorer.exe",
+    "_id": "REC-0021"
+  },
+  {
+    "source": "network_sensor",
+    "format": "json",
+    "timestamp": "2026-09-15T09:37:00Z",
+    "src_ip": "10.10.2.213",
+    "dst_ip": "52.145.32.243",
+    "dst_port": 80,
+    "protocol": "TCP",
+    "_id": "REC-0014"
+  },
+  {
+    "source": "siem",
+    "format": "json",
+    "timestamp": "2026-09-15T10:10:00Z",
+    "event_type": "badge_swipe_anomaly",
+    "user": "rverma",
+    "host": "CORP-022",
+    "_id": "REC-0026"
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T06:35:00Z",
+    "host": "CORP-008",
+    "process": "chrome.exe",
+    "parent_process": "explorer.exe",
+    "_id": "REC-0013"
+  },
+  {
+    "source": "network_sensor",
+    "format": "json",
+    "timestamp": "2026-09-15T11:21:00Z",
+    "src_ip": "10.10.19.244",
+    "dst_ip": "52.16.148.150",
+    "dst_port": 3389,
+    "protocol": "TCP",
+    "_id": "REC-0015"
+  },
+  {
+    "source": "network_sensor",
+    "format": "json",
+    "timestamp": "2026-09-15T06:29:00Z",
+    "src_ip": "10.10.30.131",
+    "dst_ip": "52.55.10.23",
+    "dst_port": 3389,
+    "protocol": "TCP",
+    "_id": "REC-0012"
+  },
+  {
+    "source": "siem",
+    "format": "json",
+    "timestamp": "2026-09-15T13:00:00Z",
+    "event_type": "antivirus_scan_clean",
+    "user": "rverma",
+    "host": "CORP-012",
+    "_id": "REC-0011"
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T09:34:00Z",
+    "host": "CORP-005",
+    "process": "chrome.exe",
+    "parent_process": "explorer.exe",
+    "_id": "REC-0017"
+  },
+  {
+    "source": "network_sensor",
+    "format": "json",
+    "timestamp": "2026-09-15T06:30:00Z",
+    "src_ip": "10.10.20.54",
+    "dst_ip": "52.128.175.137",
+    "dst_port": 3389,
+    "protocol": "TCP",
+    "_id": "REC-0020"
+  },
+  {
+    "source": "siem",
+    "format": "json",
+    "timestamp": "2026-09-15T12:18:00Z",
+    "event_type": "vpn_connect",
+    "user": "tnair",
+    "host": "CORP-013",
+    "_id": "REC-0035"
+  },
+  {
+    "source": "threat_intel_report",
+    "format": "text",
+    "timestamp": "2026-09-15T08:15:00Z",
+    "text": "IOC match: 185.214.66.91 flagged in commercial reputation feed, confidence high, category: C2 infrastructure.",
+    "attack_id_hint": null,
+    "_id": "REC-0007"
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T10:41:00Z",
+    "host": "CORP-009",
+    "process": "outlook.exe",
+    "parent_process": "explorer.exe",
+    "_id": "REC-0037"
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T12:13:00Z",
+    "host": "CORP-015",
+    "process": "teams.exe",
+    "parent_process": "explorer.exe",
+    "_id": "REC-0024"
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T07:17:00Z",
+    "host": "CORP-013",
+    "process": "chrome.exe",
+    "parent_process": "explorer.exe",
+    "_id": "REC-0010"
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T08:41:00Z",
+    "host": "FIN-LT22",
+    "process": "powershell.exe",
+    "parent_process": "explorer.exe",
+    "cmdline": "-Command Get-Process",
+    "_id": "REC-0009"
+  },
+  {
+    "source": "siem",
+    "format": "json",
+    "timestamp": "2026-09-15T10:12:00Z",
+    "event_type": "password_reset",
+    "user": "abasu",
+    "host": "CORP-010",
+    "_id": "REC-0034"
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T06:49:00Z",
+    "host": "CORP-018",
+    "process": "chrome.exe",
+    "parent_process": "explorer.exe",
+    "_id": "REC-0019"
+  },
+  {
+    "source": "siem",
+    "format": "json",
+    "timestamp": "2026-09-15T07:53:00Z",
+    "event_type": "password_reset",
+    "user": "pmenon",
+    "host": "CORP-005",
+    "_id": "REC-0016"
+  },
+  {
+    "source": "threat_intel_report",
+    "format": "text",
+    "timestamp": "2026-09-15T08:00:00Z",
+    "text": "Campaign report: infrastructure 185.214.66.91 linked to a financially motivated intrusion set observed targeting engineering contractors via spear-phishing attachments.",
+    "attack_id_hint": "T1566.001",
+    "_id": "REC-0001"
+  },
+  {
+    "source": "network_sensor",
+    "format": "json",
+    "timestamp": "2026-09-15T13:00:00Z",
+    "src_ip": "10.10.15.74",
+    "dst_ip": "52.184.99.228",
+    "dst_port": 22,
+    "protocol": "TCP",
+    "_id": "REC-0032"
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T08:33:00Z",
+    "host": "CORP-008",
+    "process": "outlook.exe",
+    "parent_process": "explorer.exe",
+    "_id": "REC-0022"
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T11:56:00Z",
+    "host": "CORP-022",
+    "process": "chrome.exe",
+    "parent_process": "explorer.exe",
+    "_id": "REC-0030"
+  },
+  {
+    "source": "network_sensor",
+    "format": "json",
+    "timestamp": "2026-09-15T12:48:00Z",
+    "src_ip": "10.10.15.19",
+    "dst_ip": "52.216.24.242",
+    "dst_port": 22,
+    "protocol": "TCP",
+    "_id": "REC-0029"
+  },
+  {
+    "source": "siem",
+    "format": "json",
+    "timestamp": "2026-09-15T08:14:00Z",
+    "event_type": "remote_logon",
+    "user": "jsharma",
+    "src_host": "ENG-WKS17",
+    "dst_host": "ENG-DB01",
+    "detail": "unexpected interactive RDP logon using service account credentials",
+    "_id": "REC-0006",
+    "protocol": "RDP",
+    "dst_port": 3389
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T08:03:00Z",
+    "host": "ENG-WKS17",
+    "process": "powershell.exe",
+    "parent_process": "winword.exe",
+    "cmdline": "-enc JAB...",
+    "_id": "REC-0003"
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T08:09:00Z",
+    "host": "ENG-WKS17",
+    "process": "lsass_dump_tool.exe",
+    "detail": "credential access attempt against lsass.exe",
+    "_id": "REC-0005"
+  },
+  {
+    "source": "siem",
+    "format": "json",
+    "timestamp": "2026-09-15T08:40:00Z",
+    "event_type": "suspicious_login",
+    "user": "kpatel",
+    "host": "FIN-LT22",
+    "detail": "login from new geolocation",
+    "_id": "REC-0008"
+  },
+  {
+    "source": "siem",
+    "format": "json",
+    "timestamp": "2026-09-15T12:14:00Z",
+    "event_type": "file_download",
+    "user": "vshah",
+    "host": "CORP-019",
+    "_id": "REC-0031"
+  },
+  {
+    "source": "network_sensor",
+    "format": "json",
+    "timestamp": "2026-09-15T06:37:00Z",
+    "src_ip": "10.10.4.133",
+    "dst_ip": "52.108.43.194",
+    "dst_port": 22,
+    "protocol": "TCP",
+    "_id": "REC-0025"
+  },
+  {
+    "source": "network_sensor",
+    "format": "json",
+    "timestamp": "2026-09-15T12:39:00Z",
+    "src_ip": "10.10.8.22",
+    "dst_ip": "52.148.77.135",
+    "dst_port": 3389,
+    "protocol": "TCP",
+    "_id": "REC-0023"
+  },
+  {
+    "source": "siem",
+    "format": "json",
+    "timestamp": "2026-09-15T12:31:00Z",
+    "event_type": "antivirus_scan_clean",
+    "user": "pmenon",
+    "host": "CORP-011",
+    "_id": "REC-0027"
+  },
+  {
+    "source": "network_sensor",
+    "format": "json",
+    "timestamp": "2026-09-15T08:37:00Z",
+    "src_ip": "10.10.18.210",
+    "dst_ip": "52.175.47.27",
+    "dst_port": 80,
+    "protocol": "TCP",
+    "_id": "REC-0018"
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T06:41:00Z",
+    "host": "CORP-006",
+    "process": "excel.exe",
+    "parent_process": "explorer.exe",
+    "_id": "REC-0036"
+  },
+  {
+    "source": "endpoint",
+    "format": "json",
+    "timestamp": "2026-09-15T11:55:00Z",
+    "host": "CORP-012",
+    "process": "excel.exe",
+    "parent_process": "explorer.exe",
+    "_id": "REC-0028"
+  }
+]

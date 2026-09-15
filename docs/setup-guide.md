@@ -1,79 +1,84 @@
 # Setup Guide
 
-> **This file is read by the automated evaluation pipeline. Be precise and complete.**
-
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+- Python 3.11 or newer
+- Git
+- IBM Bob (only needed for the optional MCP workflow)
 
-- [ ] [e.g., Python 3.11+]
-- [ ] [e.g., Node.js 18+]
-- [ ] [e.g., Docker Desktop]
-- [ ] [e.g., An IBM Cloud account with watsonx.ai access]
+## Install
 
-## Environment Variables
-
-Copy `.env.example` to `.env` and fill in the values:
+From the repository root:
 
 ```bash
-cp .env.example .env
+git clone https://github.com/Hetrajj07/bob-ai-hackathon-FourPointers.git
+cd bob-ai-hackathon-FourPointers
+python -m venv .venv
 ```
 
-| Variable | Description | Required |
-|---|---|---|
-| `WATSONX_API_KEY` | Your IBM watsonx.ai API key | Yes |
-| `WATSONX_PROJECT_ID` | Your watsonx.ai project ID | Yes |
-| `DATABASE_URL` | PostgreSQL connection string | Yes |
-| `SLACK_WEBHOOK_URL` | Slack webhook for alerts | No |
+Windows PowerShell:
 
-## Installation
+```powershell
+.venv\Scripts\Activate.ps1
+```
+
+macOS/Linux:
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/[your-org]/[your-repo].git
-cd [your-repo]
-
-# 2. Install backend dependencies
-[your command — e.g.: pip install -r requirements.txt]
-
-# 3. Install frontend dependencies (if applicable)
-[your command — e.g.: cd frontend && npm install]
-
-# 4. Set up the database (if applicable)
-[your command — e.g.: python manage.py migrate]
+source .venv/bin/activate
 ```
 
-## Running the Application
+Install dependencies:
 
 ```bash
-# Start the backend
-[your command — e.g.: uvicorn app.main:app --reload]
-
-# Start the frontend (in a separate terminal, if applicable)
-[your command — e.g.: cd frontend && npm run dev]
+python -m pip install --upgrade pip
+python -m pip install -r src/requirements.txt
 ```
 
-The application will be available at: `http://localhost:[PORT]`
-
-## Running Tests
+## Run the dashboard
 
 ```bash
-[your test command — e.g.: pytest tests/ -v]
+python -m uvicorn src.app:app --reload --host 127.0.0.1 --port 8000
 ```
 
-## Quick Demo (Optional)
+Open http://127.0.0.1:8000.
 
-If you have a demo script or sample data to showcase the project quickly:
+## Run tests
 
 ```bash
-[e.g.: python demo/seed_demo_data.py]
-[e.g.: open http://localhost:8000/demo]
+python -m pytest -q src/tests
 ```
+
+Expected result: **12 passed**.
+
+## Run the offline evaluation
+
+The benchmark uses `src/data/ground_truth.json` only in this offline script. Runtime application and MCP promotion never read those labels.
+
+```bash
+python src/evaluate.py
+```
+
+The output is a small synthetic-dataset evaluation and must not be interpreted as a production accuracy claim.
+
+## IBM Bob + MCP
+
+IBM Bob supports project-level MCP configuration in `.bob/mcp.json`. The included configuration uses local STDIO transport and sets the project root as the working directory.
+
+1. Open this repository as the workspace in IBM Bob.
+2. Open Bob settings → MCP and ensure MCP servers are enabled.
+3. Confirm the `threatfusion` server appears.
+4. Try `/investigate INC-CAND-...` using the incident ID shown by the dashboard.
+5. Try `/explain INC-CAND-...` and `/bluf INC-CAND-...`.
+
+The MCP server is read-only and exposes `correlate_events`, `get_incident`, `explain_risk`, `get_detection_gaps` and `generate_bluf`.
 
 ## Troubleshooting
 
-| Issue | Solution |
+| Issue | Fix |
 |---|---|
-| [e.g., `ModuleNotFoundError`] | [e.g., Run `pip install -r requirements.txt` again] |
-| [e.g., Database connection refused] | [e.g., Ensure PostgreSQL is running: `docker compose up db`] |
-| [e.g., watsonx.ai 401 error] | [e.g., Check `WATSONX_API_KEY` in your `.env` file] |
+| `ModuleNotFoundError` | Activate `.venv` and run `python -m pip install -r src/requirements.txt`. |
+| Dashboard does not load | Confirm port 8000 is free, then retry the uvicorn command. |
+| Bob cannot start MCP | Open the repository root as the Bob workspace and check `.bob/mcp.json`; use `python` available on PATH. |
+| Bob sees no tools | Enable MCP servers in Bob settings, then restart/reload the workspace. |
+| No promoted incident | Run the offline test suite; inspect `src/data/demo_alerts.json` and the technique mappings. |
