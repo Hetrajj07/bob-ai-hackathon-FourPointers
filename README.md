@@ -85,7 +85,7 @@ For Bob/MCP setup, see [`docs/setup-guide.md`](docs/setup-guide.md).
 - Demo video: [`demo/demo-video-link.txt`](demo/demo-video-link.txt) — replace the local-only value with a real 3–5 minute hosted URL before submission
 - Live demo: [`demo/live-demo-url.txt`](demo/live-demo-url.txt)
 - Screenshots: [`demo/screenshots/`](demo/screenshots/)
-- Presentation: [`presentation/slides.pptx`](presentation/slides.pptx)
+- Presentation: [`presentation/ThreatFusion.pptx`](presentation/ThreatFusion.pptx)
 
 ## Validation
 
