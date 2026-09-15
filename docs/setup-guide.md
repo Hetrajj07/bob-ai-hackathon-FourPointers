@@ -49,7 +49,7 @@ Open http://127.0.0.1:8000.
 python -m pytest -q src/tests
 ```
 
-Expected result: **12 passed**.
+Expected result: **20 passed**.
 
 ## Run the offline evaluation
 
@@ -71,7 +71,7 @@ IBM Bob supports project-level MCP configuration in `.bob/mcp.json`. The include
 4. Try `/investigate INC-CAND-...` using the incident ID shown by the dashboard.
 5. Try `/explain INC-CAND-...` and `/bluf INC-CAND-...`.
 
-The MCP server is read-only and exposes `correlate_events`, `get_incident`, `explain_risk`, `get_detection_gaps` and `generate_bluf`.
+The MCP server is read-only and exposes `correlate_events`, `get_incident`, `explain_risk`, `get_detection_gaps`, `generate_bluf`, `get_remediation_runbook`, and `search_indicators`.
 
 ## Troubleshooting
 

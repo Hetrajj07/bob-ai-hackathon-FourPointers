@@ -82,18 +82,18 @@ For Bob/MCP setup, see [`docs/setup-guide.md`](docs/setup-guide.md).
 
 ## Demo
 
-- Demo video: [`demo/demo-video-link.txt`](demo/demo-video-link.txt)
+- Demo video: [`demo/demo-video-link.txt`](demo/demo-video-link.txt) — replace the local-only value with a real 3–5 minute hosted URL before submission
 - Live demo: [`demo/live-demo-url.txt`](demo/live-demo-url.txt)
 - Screenshots: [`demo/screenshots/`](demo/screenshots/)
-- Presentation: [`presentation/ThreatFusion_D2.pptx`](presentation/ThreatFusion_D2.pptx)
+- Presentation: [`presentation/slides.pptx`](presentation/slides.pptx)
 
 ## Validation
 
-The repository is structurally compliant with all automated GitHub Actions checks (`.github/workflows/validate.yml`), which verify required files, valid YAML schema, non-empty source code in `src/`, non-placeholder demo link format, and replacement of all template placeholders.
+The repository passes the structural GitHub Actions checks in [`.github/workflows/validate.yml`](.github/workflows/validate.yml): required files, valid YAML, non-empty source code, and basic template replacement. The workflow does **not** verify that the demo link is publicly accessible, that the video is 3–5 minutes, or that screenshots match the current build; those are manual final-submission checks.
 
 ## Known Limitations
 
-This is an evidence-backed hackathon prototype with production-oriented architecture using synthetic multi-source telemetry and a bundled ATT&CK reference snapshot. It is not a production SOC, does not perform autonomous containment, and does not claim real threat-actor attribution. The local walk-through video is included in `demo/ThreatFusion_demo.mp4` for local reproducibility; a public hosted link is pending external hosting upload prior to final submission.
+This is an evidence-backed hackathon prototype with production-oriented architecture using synthetic multi-source telemetry and a bundled ATT&CK reference snapshot. It is not a production SOC, does not perform autonomous containment, and does not claim real threat-actor attribution. The local preview in `demo/ThreatFusion_demo.mp4` is for local reproducibility only; record and host the final walkthrough described in `demo/demo-video-script.md` before submission.
 
 ## What We're Most Proud Of
 

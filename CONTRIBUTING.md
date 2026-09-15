@@ -5,22 +5,21 @@ The judges depend on this structure to review your entry — deviations may affe
 
 ---
 
-## Step 1 — Fork This Template
+## Step 1 — Use the Official Template
 
-1. Click the **"Use this template"** button at the top of this repository
-   (or **Fork** if you prefer)
-2. Name your repository: `bob-ai-hackathon-[your-team-name]`
-   (e.g., `bob-ai-hackathon-orion-squad`)
-3. Set visibility to **Public** so judges can access it
-4. Click **Create repository**
+1. Open the official submission template and click **"Use this template"**.
+2. Do **not** fork it. A template-generated repository has clean, independent history.
+3. Name your repository: `bob-ai-hackathon-[your-team-name]`.
+4. Set visibility to **Public** so judges can access it.
+5. Click **Create repository**.
 
 ---
 
 ## Step 2 — Clone Your Fork Locally
 
 ```bash
-git clone https://github.com/[your-org]/bob-ai-hackathon-[your-team-name].git
-cd bob-ai-hackathon-[your-team-name]
+git clone https://github.com/Hetrajj07/bob-ai-hackathon-FourPointers.git
+cd bob-ai-hackathon-FourPointers
 ```
 
 ---
@@ -89,12 +88,12 @@ yq '.' submission.yaml   # checks YAML is valid
 Once validation passes:
 
 1. Copy your repository URL:
-   `https://github.com/[your-org]/bob-ai-hackathon-[your-team-name]`
+   `https://github.com/Hetrajj07/bob-ai-hackathon-FourPointers`
 
 2. Submit it via the **official entry form** at:
-   `[ORGANIZER: INSERT FORM URL HERE]`
+   `https://ibm.biz/bob-ai-charusat`
 
-3. **Deadline:** `[ORGANIZER: INSERT DEADLINE HERE]`
+3. **First-round deadline:** 15 September 2026, 11:45 PM local time.
 
 > ⚠️ Submissions after the deadline will not be reviewed.
 > Changes after the deadline are not considered — make sure everything is complete before submitting.
@@ -109,7 +108,7 @@ Once validation passes:
 - [ ] `src/` — all source code committed (no `node_modules`, no `.env`)
 - [ ] `demo/demo-video-link.txt` — real video URL (3–5 min showing the app working)
 - [ ] `demo/screenshots/` — at least 3 screenshots of the running application
-- [ ] `presentation/slides.pdf` — slide deck present
+- [ ] `presentation/slides.pptx` — slide deck present and opens cleanly
 - [ ] GitHub Actions **✅ Validate Submission** is green
 - [ ] Repository is **Public**
 - [ ] Entry form submitted before the deadline

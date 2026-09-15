@@ -14,9 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 # Allow both `python src/mcp_server.py` and `python -m src.mcp_server`.
 sys.path.insert(0, str(ROOT))
 
-from src.threatfusion.engine import TACTIC_RANK, analyze, bluf, promoted_incidents, remediation_runbook  # noqa: E402
+from src.threatfusion.engine import ENGINE_VERSION, TACTIC_RANK, analyze, bluf, promoted_incidents, remediation_runbook  # noqa: E402
 
-SERVER_VERSION = "2.0.0"
+SERVER_VERSION = ENGINE_VERSION
 # Explicitly document and negotiate supported Model Context Protocol versions.
 SUPPORTED_PROTOCOL_VERSIONS = ["2026-07-28", "2025-06-18", "2024-11-05"]
 DEFAULT_PROTOCOL_VERSION = "2025-06-18"

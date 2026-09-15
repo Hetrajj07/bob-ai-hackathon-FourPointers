@@ -1,730 +1,229 @@
+"""ThreatFusion analyst workspace and read-only API.
+
+The UI deliberately presents a case review workflow instead of an alert-counting
+dashboard: understand the case, inspect evidence, decide on next actions, and
+hand the grounded facts to IBM Bob when narrative assistance is useful.
+"""
 from __future__ import annotations
 
-import json
 from pathlib import Path
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse
 
-from src.threatfusion.engine import analyze, bluf, promoted_incidents, remediation_runbook, TACTIC_RANK
+from src.threatfusion.engine import ENGINE_VERSION, analyze, bluf, promoted_incidents, remediation_runbook
 
 ROOT = Path(__file__).resolve().parents[1]
-app = FastAPI(title="ThreatFusion — Evidence-Backed Threat Intelligence", version="2.0.0")
+app = FastAPI(title="ThreatFusion - Analyst Workspace", version=ENGINE_VERSION)
 
 INDEX = r'''<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ThreatFusion — Defense Threat Intelligence Correlation & BLUF Prioritisation</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <meta name="theme-color" content="#1c3129">
+  <title>ThreatFusion - Analyst Workspace</title>
   <style>
-    :root {
-      --bg: #050b14;
-      --bg-card: rgba(13, 27, 42, 0.85);
-      --bg-card-hover: rgba(18, 38, 58, 0.95);
-      --panel: #0d1b2a;
-      --panel2: #11253a;
-      --text: #f0f6fc;
-      --text-muted: #8b9bb4;
-      --border: #1e3a5a;
-      --border-focus: #38bdf8;
-      --cyan: #38bdf8;
-      --indigo: #818cf8;
-      --green: #10b981;
-      --amber: #f59e0b;
-      --rose: #f43f5e;
-      --p1-bg: rgba(244, 63, 94, 0.2);
-      --p1-border: #f43f5e;
-      --p2-bg: rgba(245, 158, 11, 0.2);
-      --p2-border: #f59e0b;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: radial-gradient(circle at 50% 0%, #0d2238 0%, #050b14 70%);
-      color: var(--text);
-      font-family: 'Inter', -apple-system, sans-serif;
-      min-height: 100vh;
-      line-height: 1.5;
-    }
-    .container { max-width: 1440px; margin: 0 auto; padding: 24px; }
-    
-    /* Header */
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 16px;
-      padding-bottom: 20px;
-      border-bottom: 1px solid var(--border);
-      margin-bottom: 24px;
-    }
-    .brand-group { display: flex; align-items: center; gap: 14px; }
-    .brand-icon {
-      width: 44px; height: 44px; border-radius: 12px;
-      background: linear-gradient(135deg, #0284c7, #6366f1);
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 900; font-size: 22px; color: #fff;
-      box-shadow: 0 0 24px rgba(56, 189, 248, 0.4);
-    }
-    .brand-title { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
-    .brand-title span { color: var(--cyan); }
-    .brand-sub { font-size: 13px; color: var(--text-muted); font-weight: 400; }
-    .badge-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .badge {
-      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
-      padding: 5px 10px; border-radius: 9999px; background: rgba(56, 189, 248, 0.1);
-      border: 1px solid rgba(56, 189, 248, 0.25); color: var(--cyan);
-    }
-    .pulse-dot {
-      width: 8px; height: 8px; border-radius: 50%; background: var(--green);
-      display: inline-block; margin-right: 6px; box-shadow: 0 0 8px var(--green);
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
-    
-    /* Top KPIs */
-    .kpi-grid {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px; margin-bottom: 24px;
-    }
-    .kpi-card {
-      background: var(--bg-card); backdrop-filter: blur(12px);
-      border: 1px solid var(--border); border-radius: 14px;
-      padding: 18px 20px; transition: transform 0.2s, border-color 0.2s;
-    }
-    .kpi-card:hover { transform: translateY(-2px); border-color: rgba(56, 189, 248, 0.4); }
-    .kpi-label { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; }
-    .kpi-value { font-size: 32px; font-weight: 800; margin: 4px 0; color: #fff; font-family: 'JetBrains Mono', monospace; }
-    .kpi-desc { font-size: 12px; color: var(--text-muted); }
-    
-    /* Tab Navigation */
-    .tab-bar {
-      display: flex; gap: 8px; border-bottom: 1px solid var(--border);
-      margin-bottom: 24px; overflow-x: auto; padding-bottom: 2px;
-    }
-    .tab-btn {
-      background: transparent; border: none; color: var(--text-muted);
-      padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
-      border-radius: 8px 8px 0 0; transition: all 0.2s; display: flex; align-items: center; gap: 8px;
-    }
-    .tab-btn:hover { color: var(--text); background: rgba(255, 255, 255, 0.04); }
-    .tab-btn.active {
-      color: var(--cyan); background: rgba(56, 189, 248, 0.08);
-      border-bottom: 2px solid var(--cyan);
-    }
-    
-    /* Layouts */
-    .split-layout { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 24px; }
-    @media (max-width: 1080px) { .split-layout { grid-template-columns: 1fr; } }
-    
-    .panel {
-      background: var(--bg-card); backdrop-filter: blur(12px);
-      border: 1px solid var(--border); border-radius: 14px; padding: 22px; margin-bottom: 24px;
-    }
-    .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .panel-title { font-size: 17px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
-    
-    /* Table */
-    .incident-table { width: 100%; border-collapse: collapse; }
-    .incident-table th { text-align: left; padding: 10px 12px; font-size: 11px; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); font-weight: 600; }
-    .incident-table td { padding: 14px 12px; font-size: 13px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-    .incident-table tr { cursor: pointer; transition: background 0.15s; }
-    .incident-table tr:hover { background: rgba(56, 189, 248, 0.05); }
-    .incident-table tr.selected { background: rgba(56, 189, 248, 0.12); border-left: 3px solid var(--cyan); }
-    
-    /* Badges & Pills */
-    .pill { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; text-transform: uppercase; }
-    .pill.p1 { background: var(--p1-bg); color: #fda4af; border: 1px solid var(--p1-border); }
-    .pill.p2 { background: var(--p2-bg); color: #fde68a; border: 1px solid var(--p2-border); }
-    .pill.source { background: rgba(99, 102, 241, 0.15); color: #c7d2fe; border: 1px solid rgba(99, 102, 241, 0.3); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
-    
-    /* Attack Kill Chain Visualizer */
-    .kill-chain { display: flex; align-items: stretch; gap: 10px; margin: 20px 0; overflow-x: auto; padding-bottom: 8px; }
-    .chain-node {
-      flex: 1; min-width: 140px; background: rgba(17, 37, 58, 0.8); border: 1px solid var(--border);
-      border-radius: 10px; padding: 12px; text-align: center; position: relative;
-    }
-    .chain-node.active { border-color: var(--cyan); background: rgba(14, 43, 70, 0.9); box-shadow: 0 0 12px rgba(56, 189, 248, 0.2); }
-    .chain-phase { font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--cyan); letter-spacing: 0.5px; }
-    .chain-tech { font-size: 13px; font-weight: 700; margin: 4px 0; font-family: 'JetBrains Mono', monospace; }
-    .chain-name { font-size: 11px; color: var(--text-muted); line-height: 1.2; }
-    .chain-arrow { align-self: center; color: var(--text-muted); font-size: 16px; font-weight: bold; }
-    
-    /* 4-Quadrant Priority Decomposition */
-    .metric-quad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
-    @media (max-width: 680px) { .metric-quad { grid-template-columns: repeat(2, 1fr); } }
-    .quad-box { background: rgba(17, 37, 58, 0.6); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
-    .quad-label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
-    .quad-val { font-size: 24px; font-weight: 800; margin: 4px 0; font-family: 'JetBrains Mono', monospace; }
-    .quad-bar { height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 2px; overflow: hidden; margin-top: 6px; }
-    .quad-fill { height: 100%; border-radius: 2px; }
-    
-    /* Timeline */
-    .timeline { position: relative; padding-left: 24px; border-left: 2px solid var(--border); margin: 16px 0; }
-    .timeline-item { position: relative; margin-bottom: 18px; }
-    .timeline-dot {
-      position: absolute; left: -31px; top: 3px; width: 12px; height: 12px;
-      border-radius: 50%; background: var(--cyan); border: 2px solid #050b14;
-    }
-    .timeline-time { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--cyan); font-weight: 600; }
-    .timeline-title { font-size: 13px; font-weight: 700; margin: 2px 0; }
-    .timeline-body { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
-    .timeline-meta { display: flex; gap: 8px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
-    
-    /* BLUF Block */
-    .bluf-card {
-      background: #08111d; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 12px;
-      padding: 18px; position: relative; margin-bottom: 18px;
-    }
-    .bluf-section { margin-bottom: 14px; }
-    .bluf-section:last-child { margin-bottom: 0; }
-    .bluf-heading { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--cyan); margin-bottom: 4px; }
-    .bluf-text { font-size: 13px; line-height: 1.6; color: #e2e8f0; }
-    
-    /* Runbook */
-    .runbook-step {
-      background: rgba(17, 37, 58, 0.5); border-left: 3px solid var(--cyan);
-      border-radius: 0 8px 8px 0; padding: 12px 14px; margin-bottom: 10px; font-size: 13px;
-    }
-    .step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-    .step-phase { font-weight: 700; color: var(--cyan); font-size: 12px; text-transform: uppercase; }
-    .step-target { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
-    
-    /* Buttons */
-    .btn {
-      background: #0369a1; border: 1px solid #38bdf8; color: #fff;
-      padding: 8px 14px; font-size: 12px; font-weight: 600; border-radius: 8px;
-      cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;
-    }
-    .btn:hover { background: #0284c7; box-shadow: 0 0 12px rgba(56, 189, 248, 0.4); }
-    .btn-secondary { background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border); color: var(--text); }
-    .btn-secondary:hover { background: rgba(255, 255, 255, 0.12); }
-    
-    /* Toast */
-    .toast {
-      position: fixed; bottom: 24px; right: 24px; background: #0c4a6e;
-      border: 1px solid var(--cyan); color: #fff; padding: 12px 20px;
-      border-radius: 10px; font-size: 13px; font-weight: 600; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-      transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 9999;
-    }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    
-    /* Terminal Preview */
-    .terminal {
-      background: #04080f; border: 1px solid #1e3a5a; border-radius: 10px;
-      padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 12px;
-      color: #a5f3fc; max-height: 420px; overflow-y: auto; white-space: pre-wrap; line-height: 1.5;
-    }
-    .mono { font-family: 'JetBrains Mono', monospace; }
+    :root { --canvas:#f5f1e8; --paper:#fffdf8; --ink:#17251e; --muted:#617068; --faint:#8b978f; --line:#d5dcd4; --soft:#e8eee7; --moss:#1f624d; --moss-dark:#174837; --moss-pale:#dcece3; --amber:#9b6614; --amber-pale:#f6e7c7; --rose:#963e36; --rose-pale:#f5dfdc; --navy:#1c3129; --navy-soft:#2d4940; --shadow:0 14px 34px rgba(23,37,30,.08); }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:var(--canvas); color:var(--ink); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:15px; line-height:1.5; }
+    button,input { font:inherit; }
+    button { cursor:pointer; }
+    button:focus-visible,a:focus-visible { outline:3px solid #136b98; outline-offset:3px; }
+    .skip-link { position:fixed; left:16px; top:-80px; z-index:100; padding:10px 14px; border-radius:8px; background:var(--paper); color:var(--ink); }
+    .skip-link:focus { top:16px; }
+    .shell { min-height:100vh; }
+    .topbar { min-height:72px; padding:14px clamp(20px,4vw,64px); display:flex; align-items:center; justify-content:space-between; gap:18px; background:var(--navy); color:#f7f6f1; border-bottom:1px solid rgba(255,255,255,.12); }
+    .brand { display:flex; align-items:center; gap:13px; }
+    .brand-mark { width:38px; height:38px; display:grid; place-items:center; border-radius:10px; color:var(--navy); background:#dfeee6; font-family:Georgia,serif; font-size:22px; font-weight:700; }
+    .brand-name { font-size:20px; font-weight:750; letter-spacing:-.02em; }
+    .brand-subtitle { color:#b9c9c0; font-size:12px; }
+    .topbar-meta { color:#c8d6cf; font-size:12px; text-align:right; }
+    .topbar-meta strong { color:#f6e0aa; font-weight:700; }
+    .layout { display:grid; grid-template-columns:minmax(240px,300px) minmax(0,1fr); max-width:1600px; margin:0 auto; min-height:calc(100vh - 72px); }
+    .case-rail { padding:30px 20px; border-right:1px solid var(--line); }
+    .eyebrow { margin:0 0 8px; color:var(--moss); font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
+    h1,h2,h3,p { margin-top:0; }
+    .rail-title { font-family:Georgia,"Times New Roman",serif; font-size:26px; line-height:1.1; margin-bottom:10px; }
+    .rail-copy { color:var(--muted); font-size:13px; margin-bottom:22px; }
+    .case-list { display:grid; gap:10px; }
+    .case-item { width:100%; min-height:104px; padding:15px; text-align:left; border:1px solid var(--line); border-radius:12px; color:var(--ink); background:transparent; transition:.16s ease; }
+    .case-item:hover { background:var(--paper); border-color:#a9bbb0; }
+    .case-item[aria-current="true"] { background:var(--paper); border-color:var(--moss); box-shadow:0 7px 18px rgba(31,98,77,.12); }
+    .case-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .case-id { font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:12px; font-weight:700; }
+    .priority { display:inline-flex; align-items:center; justify-content:center; min-width:34px; min-height:24px; padding:2px 7px; border-radius:999px; font-size:11px; font-weight:800; }
+    .priority.p1 { color:#7a251e; background:var(--rose-pale); }
+    .priority.p2 { color:#704700; background:var(--amber-pale); }
+    .case-desc { display:block; margin-top:9px; color:var(--muted); font-size:12px; }
+    .case-foot { display:flex; gap:10px; margin-top:8px; color:var(--faint); font-size:11px; }
+    .rail-note { margin-top:24px; padding-top:19px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; }
+    .rail-note strong { color:var(--ink); }
+    main { min-width:0; padding:clamp(22px,4vw,54px); }
+    .case-header { display:flex; align-items:flex-start; justify-content:space-between; gap:22px; padding-bottom:24px; border-bottom:1px solid var(--line); }
+    .case-title { font-family:Georgia,"Times New Roman",serif; font-size:clamp(30px,4vw,48px); letter-spacing:-.035em; line-height:1.02; margin-bottom:9px; }
+    .case-summary { max-width:720px; color:var(--muted); font-size:16px; }
+    .case-signal { min-width:168px; padding:14px 16px; border-radius:12px; background:var(--moss-pale); color:var(--moss-dark); }
+    .case-signal span { display:block; font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .case-signal strong { display:block; margin-top:3px; font-size:18px; }
+    .tabbar { display:flex; gap:4px; overflow-x:auto; padding:17px 0; border-bottom:1px solid var(--line); }
+    .tab { min-height:44px; padding:9px 13px; border:0; border-radius:8px; background:transparent; color:var(--muted); white-space:nowrap; font-size:13px; font-weight:700; }
+    .tab:hover { background:var(--soft); color:var(--ink); }
+    .tab[aria-selected="true"] { background:var(--navy); color:#fffdf8; }
+    .panel { display:none; padding-top:26px; }
+    .panel.active { display:block; }
+    .split { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(300px,.85fr); gap:22px; }
+    .stack { display:grid; gap:22px; }
+    .card { padding:23px; border:1px solid var(--line); border-radius:14px; background:var(--paper); box-shadow:var(--shadow); }
+    .card h2 { font-family:Georgia,"Times New Roman",serif; font-size:25px; letter-spacing:-.02em; margin-bottom:7px; }
+    .card h3 { font-size:14px; margin-bottom:7px; }
+    .muted { color:var(--muted); }
+    .decision-card { border-left:5px solid var(--moss); }
+    .decision-copy { font-size:18px; line-height:1.55; }
+    .metric-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+    .metric { padding:14px; background:#f7f8f4; border:1px solid #e1e6df; border-radius:10px; }
+    .metric-label { display:block; color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; }
+    .metric-value { display:block; margin-top:5px; font-family:Georgia,serif; font-size:29px; line-height:1; }
+    .metric-note { display:block; margin-top:6px; color:var(--faint); font-size:11px; }
+    .check-list,.action-list,.plain-list { margin:0; padding:0; list-style:none; }
+    .check-list { display:grid; gap:10px; }
+    .check-list li { display:flex; align-items:flex-start; gap:10px; color:var(--ink); }
+    .check-mark { flex:0 0 20px; height:20px; display:grid; place-items:center; margin-top:1px; border-radius:50%; background:var(--moss-pale); color:var(--moss-dark); font-weight:900; font-size:12px; }
+    .check-mark.fail { background:var(--rose-pale); color:var(--rose); }
+    .check-detail { color:var(--muted); font-size:13px; }
+    .timeline { position:relative; display:grid; gap:0; }
+    .timeline-item { position:relative; display:grid; grid-template-columns:78px minmax(0,1fr); gap:16px; padding:0 0 20px; }
+    .timeline-item::before { content:""; position:absolute; top:22px; bottom:-1px; left:79px; width:1px; background:var(--line); }
+    .timeline-item:last-child::before { display:none; }
+    .time { color:var(--moss); font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:12px; font-weight:700; padding-top:3px; }
+    .evidence { position:relative; min-width:0; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:#fbfcf9; }
+    .evidence::before { content:""; position:absolute; top:17px; left:-7px; width:12px; height:12px; border:3px solid var(--moss); border-radius:50%; background:var(--canvas); }
+    .evidence-head { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .evidence-title { font-weight:750; }
+    .source { color:var(--muted); font-size:11px; text-transform:capitalize; }
+    .technique { margin-top:6px; color:var(--moss-dark); font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:12px; }
+    .evidence-reason { margin:5px 0 0; color:var(--muted); font-size:12px; }
+    .filters { display:flex; flex-wrap:wrap; gap:7px; margin:0 0 17px; }
+    .filter { min-height:36px; padding:6px 10px; border:1px solid var(--line); border-radius:999px; color:var(--muted); background:var(--paper); font-size:12px; font-weight:700; }
+    .filter[aria-pressed="true"] { background:var(--moss); border-color:var(--moss); color:white; }
+    .brief-section { padding:16px 0; border-bottom:1px solid var(--line); }
+    .brief-section:last-of-type { border-bottom:0; }
+    .brief-label { margin-bottom:4px; color:var(--moss); font-size:11px; font-weight:800; letter-spacing:.09em; text-transform:uppercase; }
+    .action-list { display:grid; gap:11px; }
+    .action-item { padding:13px; border-left:3px solid var(--amber); background:#fbf7ef; }
+    .action-item strong { display:block; font-size:13px; }
+    .action-item span { display:block; margin-top:3px; color:var(--muted); font-size:12px; }
+    .btn-row { display:flex; flex-wrap:wrap; gap:9px; margin-top:18px; }
+    .button { min-height:44px; padding:10px 14px; border:1px solid var(--navy); border-radius:8px; color:white; background:var(--navy); font-size:13px; font-weight:750; }
+    .button:hover { background:var(--navy-soft); }
+    .button.secondary { color:var(--navy); background:transparent; }
+    .button.secondary:hover { background:var(--soft); }
+    .compare { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:18px; }
+    .compare-step { min-height:156px; padding:17px; border:1px solid var(--line); border-radius:10px; background:#f9faf7; }
+    .compare-number { display:block; margin-bottom:9px; color:var(--moss); font-family:Georgia,serif; font-size:42px; line-height:.9; }
+    .compare-step strong { display:block; margin-bottom:5px; }
+    .compare-step p { margin:0; color:var(--muted); font-size:12px; }
+    .mcp-command { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:13px; border:1px solid var(--line); border-radius:9px; background:#f7f8f4; }
+    .mcp-command code { overflow-wrap:anywhere; color:var(--moss-dark); font-size:13px; }
+    .tool-output { min-height:150px; max-height:410px; overflow:auto; margin-top:16px; padding:14px; border-radius:10px; background:#17251e; color:#e4f0e8; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:12px; line-height:1.55; white-space:pre-wrap; }
+    .notice { padding:14px; border-radius:10px; background:var(--amber-pale); color:#6f490e; font-size:13px; }
+    .status { min-height:20px; margin:16px 0 0; color:var(--moss-dark); font-size:13px; }
+    .empty { padding:28px; color:var(--muted); text-align:center; }
+    @media (max-width:980px) { .layout { grid-template-columns:1fr; } .case-rail { border-right:0; border-bottom:1px solid var(--line); } .case-list { grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); } .rail-note { display:none; } .split { grid-template-columns:1fr; } }
+    @media (max-width:620px) { .topbar { align-items:flex-start; flex-direction:column; } .topbar-meta { text-align:left; } main { padding:24px 16px 42px; } .case-rail { padding:24px 16px; } .case-header { flex-direction:column; } .case-signal { width:100%; } .metric-grid,.compare { grid-template-columns:1fr; } .timeline-item { grid-template-columns:1fr; gap:6px; } .timeline-item::before { left:5px; top:26px; } .evidence { margin-left:16px; } .time { padding-left:22px; } }
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div class="brand-group">
-        <div class="brand-icon">TF</div>
-        <div>
-          <div class="brand-title">Threat<span>Fusion</span></div>
-          <div class="brand-sub">D2 · Evidence-Backed Threat Intelligence Correlation & Alert Prioritisation Assistant</div>
-        </div>
-      </div>
-      <div class="badge-bar">
-        <div class="badge"><span class="pulse-dot"></span>Active Telemetry Pipeline</div>
-        <div class="badge">ATT&CK v19.2</div>
-        <div class="badge">IBM Bob MCP Ready</div>
-        <button class="btn" onclick="copyBobCommand('/investigate INC-CAND-09226FFA')">📋 Copy /investigate</button>
-      </div>
-    </header>
-
-    <!-- KPI Summary Row -->
-    <div class="kpi-grid" id="kpi-row">
-      <div class="kpi-card"><div class="kpi-label">Raw Observations</div><div class="kpi-value" id="kpi-raw">37</div><div class="kpi-desc">Multi-source heterogeneous feeds</div></div>
-      <div class="kpi-card"><div class="kpi-label">Candidate Hypotheses</div><div class="kpi-value" id="kpi-cand">2</div><div class="kpi-desc">Formed via entity-temporal graphs</div></div>
-      <div class="kpi-card"><div class="kpi-label">Promoted Incidents</div><div class="kpi-value" id="kpi-prom" style="color:var(--rose)">1</div><div class="kpi-desc">Validated multi-stage attack story</div></div>
-      <div class="kpi-card"><div class="kpi-label">False-Positive Suppression</div><div class="kpi-value" id="kpi-fp" style="color:var(--green)">100%</div><div class="kpi-desc">Ambiguous routine admin suppressed</div></div>
-      <div class="kpi-card"><div class="kpi-label">Candidate Compression</div><div class="kpi-value" id="kpi-comp" style="color:var(--cyan)">94.6%</div><div class="kpi-desc">Cognitive alert load reduction</div></div>
-    </div>
-
-    <!-- Tab Bar -->
-    <div class="tab-bar">
-      <button class="tab-btn active" onclick="switchTab('triage')">🛡️ Incident Triage & Attack Flow</button>
-      <button class="tab-btn" onclick="switchTab('bluf')">📑 Commander BLUF & IR Runbook</button>
-      <button class="tab-btn" onclick="switchTab('timeline')">⏱️ Grounded Evidence Timeline</button>
-      <button class="tab-btn" onclick="switchTab('baseline')">⚖️ ThreatFusion vs. Naive Baseline</button>
-      <button class="tab-btn" onclick="switchTab('mcp')">🤖 IBM Bob MCP Terminal</button>
-    </div>
-
-    <!-- TAB 1: Triage & Attack Flow -->
-    <div id="tab-triage" class="tab-content">
-      <div class="split-layout">
-        <div>
-          <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">Prioritized Incident Candidates</div>
-              <span class="badge">Evidence Promotion Gate</span>
-            </div>
-            <table class="incident-table">
-              <thead>
-                <tr>
-                  <th>Incident ID</th>
-                  <th>Priority</th>
-                  <th>Score</th>
-                  <th>Confidence</th>
-                  <th>Impact</th>
-                  <th>Attack Flow</th>
-                  <th>Sources</th>
-                </tr>
-              </thead>
-              <tbody id="incident-rows"></tbody>
-            </table>
-          </div>
-
-          <!-- Attack Flow Kill Chain Graph -->
-          <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">Attack-Flow Coherence Graph</div>
-              <span id="flow-score-badge" class="badge">Coherence: --</span>
-            </div>
-            <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-              Reconstructs adversary campaign sequence from multi-source observations. Measures tactic progression, depth, and backtracks.
-            </p>
-            <div class="kill-chain" id="kill-chain-nodes"></div>
-            <div style="font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between; border-top: 1px solid var(--border); padding-top: 10px;">
-              <span id="flow-stat-progressions">Strict Progressions: --</span>
-              <span id="flow-stat-backtracks">Backtracks: --</span>
-              <span id="flow-stat-unobserved">Unobserved Tactics: --</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right Side: Deep Inspection & Decision Dimensions -->
-        <div>
-          <div class="panel" id="incident-detail-panel">
-            <div class="panel-header">
-              <div>
-                <div id="sel-id" class="panel-title mono">Loading...</div>
-                <div id="sel-summary" style="font-size: 12px; color: var(--text-muted);"></div>
-              </div>
-              <div id="sel-priority-pill"></div>
-            </div>
-
-            <!-- 4-Quadrant Prioritization Score -->
-            <div class="metric-quad">
-              <div class="quad-box">
-                <div class="quad-label">Confidence</div>
-                <div class="quad-val" id="sel-conf" style="color:var(--cyan)">--%</div>
-                <div class="quad-bar"><div id="sel-conf-bar" class="quad-fill" style="background:var(--cyan)"></div></div>
-              </div>
-              <div class="quad-box">
-                <div class="quad-label">Threat Severity</div>
-                <div class="quad-val" id="sel-sev" style="color:var(--rose)">--</div>
-                <div class="quad-bar"><div id="sel-sev-bar" class="quad-fill" style="background:var(--rose)"></div></div>
-              </div>
-              <div class="quad-box">
-                <div class="quad-label">Mission Impact</div>
-                <div class="quad-val" id="sel-imp" style="color:var(--amber)">--</div>
-                <div class="quad-bar"><div id="sel-imp-bar" class="quad-fill" style="background:var(--amber)"></div></div>
-              </div>
-              <div class="quad-box">
-                <div class="quad-label">Urgency</div>
-                <div class="quad-val" id="sel-urg" style="color:var(--indigo)">--</div>
-                <div class="quad-bar"><div id="sel-urg-bar" class="quad-fill" style="background:var(--indigo)"></div></div>
-              </div>
-            </div>
-
-            <div style="margin-bottom: 16px;">
-              <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px;">Grounded Risk Factor Decomposition</div>
-              <div id="risk-factors-bars"></div>
-            </div>
-
-            <div style="margin-bottom: 16px;">
-              <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">Affected Mission Assets</div>
-              <div id="asset-context-list" style="font-size: 12px; color: #cbd5e1;"></div>
-            </div>
-
-            <div>
-              <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px;">Adversary Technique Consistency</div>
-              <div id="actor-context" style="font-size: 12px; color: var(--text-muted);"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 2: BLUF & IR Runbook -->
-    <div id="tab-bluf" class="tab-content" style="display:none;">
-      <div class="split-layout">
-        <div>
-          <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">Commander Bottom Line Up Front (BLUF)</div>
-              <div style="display:flex; gap:8px;">
-                <button class="btn btn-secondary" onclick="copyBlufText()">📋 Copy BLUF</button>
-                <button class="btn" onclick="exportReport()">📥 Export Brief</button>
-              </div>
-            </div>
-            <div class="bluf-card" id="bluf-container">
-              <div class="bluf-section">
-                <div class="bluf-heading">1. Bottom Line</div>
-                <div class="bluf-text" id="bluf-bottom-line">Loading...</div>
-              </div>
-              <div class="bluf-section">
-                <div class="bluf-heading">2. Strategic Assessment</div>
-                <div class="bluf-text" id="bluf-assessment">Loading...</div>
-              </div>
-              <div class="bluf-section">
-                <div class="bluf-heading">3. Actor Behavioral Consistency</div>
-                <div class="bluf-text" id="bluf-actor">Loading...</div>
-              </div>
-              <div class="bluf-section">
-                <div class="bluf-heading">4. Telemetry Gaps & Uncertainty</div>
-                <div class="bluf-text" id="bluf-uncertainty">Loading...</div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div>
-          <div class="panel">
-            <div class="panel-header">
-              <div class="panel-title">Incident Response & Remediation Runbook</div>
-              <span class="badge">Mapped to ATT&CK</span>
-            </div>
-            <div id="runbook-steps"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 3: Evidence Timeline -->
-    <div id="tab-timeline" class="tab-content" style="display:none;">
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Multi-Source Evidence Timeline</div>
-          <div style="display:flex; gap:8px;">
-            <button class="btn btn-secondary" onclick="filterTimeline('all')">All Sources</button>
-            <button class="btn btn-secondary" onclick="filterTimeline('siem')">SIEM</button>
-            <button class="btn btn-secondary" onclick="filterTimeline('endpoint')">Endpoint</button>
-            <button class="btn btn-secondary" onclick="filterTimeline('network_sensor')">Network</button>
-            <button class="btn btn-secondary" onclick="filterTimeline('threat_intel_report')">Threat Intel</button>
-          </div>
-        </div>
-        <div class="timeline" id="timeline-container"></div>
-      </div>
-    </div>
-
-    <!-- TAB 4: Baseline Comparison -->
-    <div id="tab-baseline" class="tab-content" style="display:none;">
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">Baseline Comparison: Why Naive Correlation Fails</div>
-          <span class="badge">Offline Benchmark Data</span>
-        </div>
-        <div class="split-layout" style="margin-top: 16px;">
-          <div style="background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.25); border-radius: 12px; padding: 18px;">
-            <h3 style="color:#fda4af; margin-bottom: 8px;">❌ Naive Time + Entity Clustering</h3>
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
-              Simple rules ("same host within 90 minutes") cluster all shared administrative activity together without behavioral validation.
-            </p>
-            <ul style="font-size: 13px; line-height: 1.8; color: #cbd5e1; padding-left: 20px;">
-              <li>Generates <b>4 alert clusters</b> from 37 records.</li>
-              <li>Flags <b>INC-B</b> (routine admin login + clean scan) as an incident.</li>
-              <li>Causes severe analyst alert fatigue and false escalations.</li>
-              <li>No ATT&CK sub-technique mapping or attack-flow verification.</li>
-            </ul>
-          </div>
-          <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 12px; padding: 18px;">
-            <h3 style="color:#6ee7b7; margin-bottom: 8px;">✅ ThreatFusion Evidence-Backed Model</h3>
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">
-              Separates candidate hypotheses from incident promotion. Validates tactic progression, corroboration, and negative evidence.
-            </p>
-            <ul style="font-size: 13px; line-height: 1.8; color: #cbd5e1; padding-left: 20px;">
-              <li>Forms <b>2 candidate hypotheses</b> with weighted temporal decay.</li>
-              <li>Promotes <b>1 high-confidence incident</b> (INC-A).</li>
-              <li>Suppresses <b>INC-B</b> due to clean AV scan and lack of coherent attack flow.</li>
-              <li><b>100% false-positive suppression</b> on synthetic benchmark.</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 5: Bob MCP Terminal -->
-    <div id="tab-mcp" class="tab-content" style="display:none;">
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-title">IBM Bob MCP Interactive Sandbox</div>
-          <div style="display:flex; gap:8px;">
-            <button class="btn btn-secondary" onclick="runMcpTool('correlate_events')">correlate_events</button>
-            <button class="btn btn-secondary" onclick="runMcpTool('get_incident')">get_incident</button>
-            <button class="btn btn-secondary" onclick="runMcpTool('explain_risk')">explain_risk</button>
-            <button class="btn btn-secondary" onclick="runMcpTool('get_detection_gaps')">get_detection_gaps</button>
-            <button class="btn btn-secondary" onclick="runMcpTool('get_remediation_runbook')">get_remediation_runbook</button>
-            <button class="btn btn-secondary" onclick="runMcpTool('generate_bluf')">generate_bluf</button>
-          </div>
-        </div>
-        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">
-          This terminal queries the exact JSON-RPC tools exposed via <code class="mono">src/mcp_server.py</code> to IBM Bob.
-        </p>
-        <div class="terminal" id="terminal-out">// Select an MCP tool above to inspect live JSON-RPC response payload...</div>
-      </div>
+  <a class="skip-link" href="#workspace">Skip to investigation workspace</a>
+  <div class="shell">
+    <header class="topbar"><div class="brand"><div class="brand-mark" aria-hidden="true">T</div><div><div class="brand-name">ThreatFusion</div><div class="brand-subtitle">Evidence-first investigation workspace</div></div></div><div class="topbar-meta"><strong>Synthetic case study</strong><br>Grounded analysis · local IBM Bob MCP</div></header>
+    <div class="layout">
+      <aside class="case-rail" aria-label="Incident queue"><p class="eyebrow">Investigation queue</p><h1 class="rail-title">Cases that earned review</h1><p class="rail-copy">Candidates stay out of this list until available evidence meets the promotion boundary.</p><div id="case-list" class="case-list" aria-live="polite"><div class="empty">Loading cases…</div></div><div class="rail-note"><strong>What this workspace does:</strong><br>It distinguishes facts, confidence, uncertainty, and actions. It does not claim production accuracy or actor attribution.</div></aside>
+      <main id="workspace">
+        <div class="case-header"><div><p class="eyebrow">Active investigation</p><h1 id="case-title" class="case-title">Loading the case…</h1><p id="case-summary" class="case-summary">Preparing the evidence narrative.</p></div><div class="case-signal"><span>Current priority</span><strong id="case-priority">—</strong></div></div>
+        <nav class="tabbar" role="tablist" aria-label="Case workspace views"><button class="tab" id="tab-overview" role="tab" aria-controls="panel-overview" aria-selected="true" data-tab="overview">Case overview</button><button class="tab" id="tab-evidence" role="tab" aria-controls="panel-evidence" aria-selected="false" data-tab="evidence">Evidence sequence</button><button class="tab" id="tab-response" role="tab" aria-controls="panel-response" aria-selected="false" data-tab="response">Commander brief</button><button class="tab" id="tab-compare" role="tab" aria-controls="panel-compare" aria-selected="false" data-tab="compare">Why this case</button><button class="tab" id="tab-bob" role="tab" aria-controls="panel-bob" aria-selected="false" data-tab="bob">IBM Bob handoff</button></nav>
+        <div id="status" class="status" aria-live="polite"></div>
+        <section id="panel-overview" class="panel active" role="tabpanel" aria-labelledby="tab-overview"><div class="split"><div class="stack"><article class="card decision-card"><p class="eyebrow">Decision in plain language</p><h2>Why this needs attention</h2><p id="decision-copy" class="decision-copy">Loading…</p></article><article class="card"><p class="eyebrow">Evidence path</p><h2>What happened</h2><p class="muted">A time-ordered chain across independent sources. Select the evidence-sequence view for full provenance.</p><div id="overview-timeline" class="timeline"></div></article></div><div class="stack"><article class="card"><p class="eyebrow">Risk dimensions</p><h2>Four separate questions</h2><div id="metric-grid" class="metric-grid"></div></article><article class="card"><p class="eyebrow">Promotion boundary</p><h2>Why this became a case</h2><ul id="promotion-checks" class="check-list"></ul></article><article class="card"><p class="eyebrow">Assets and uncertainty</p><h2>Context to preserve</h2><div id="asset-context" class="muted"></div><div id="uncertainty-context" class="notice" style="margin-top:16px;"></div></article></div></div></section>
+        <section id="panel-evidence" class="panel" role="tabpanel" aria-labelledby="tab-evidence"><article class="card"><p class="eyebrow">Grounded chronology</p><h2>Evidence sequence</h2><p class="muted">Every inference points back to a source record. Filter the timeline without changing the underlying case.</p><div id="source-filters" class="filters" aria-label="Filter evidence by source"></div><div id="full-timeline" class="timeline"></div></article></section>
+        <section id="panel-response" class="panel" role="tabpanel" aria-labelledby="tab-response"><div class="split"><article class="card"><p class="eyebrow">Commander brief</p><h2>Bottom line up front</h2><div id="brief-content"></div><div class="btn-row"><button id="copy-brief" class="button">Copy brief</button><button id="export-brief" class="button secondary">Export Markdown</button></div></article><article class="card"><p class="eyebrow">Recommended response</p><h2>Actions, not automation</h2><p class="muted">The prototype recommends analyst-reviewed response steps. It never contains systems autonomously.</p><ol id="response-actions" class="action-list"></ol></article></div></section>
+        <section id="panel-compare" class="panel" role="tabpanel" aria-labelledby="tab-compare"><article class="card"><p class="eyebrow">Method check</p><h2>From alerts to a defensible case</h2><p class="muted">The bundled benchmark is a reproducible synthetic demonstration, not a generalized effectiveness claim.</p><div class="compare"><div class="compare-step"><span class="compare-number">37</span><strong>Raw observations</strong><p>Four source schemas arrive with different context and reliability.</p></div><div class="compare-step"><span class="compare-number">2</span><strong>Candidate hypotheses</strong><p>Weighted entity and time links create possibilities, not incidents.</p></div><div class="compare-step"><span class="compare-number">1</span><strong>Promoted case</strong><p>Behavior, corroboration, confidence, and independence must agree.</p></div></div></article><div class="split" style="margin-top:22px;"><article class="card"><p class="eyebrow">Naive approach</p><h2>What it gets wrong</h2><ul class="plain-list"><li>• Treats shared entities as proof.</li><li>• Uses fixed time windows alone.</li><li>• Hides contradictory or missing evidence.</li><li>• Can promote routine activity.</li></ul></article><article class="card"><p class="eyebrow">ThreatFusion boundary</p><h2>What changes</h2><ul class="plain-list"><li>• Checks observable ATT&amp;CK behavior.</li><li>• Scores confidence separately from impact.</li><li>• Keeps telemetry gaps explicit.</li><li>• Holds ambiguous clusters below promotion.</li></ul></article></div></section>
+        <section id="panel-bob" class="panel" role="tabpanel" aria-labelledby="tab-bob"><div class="split"><article class="card"><p class="eyebrow">Grounded handoff</p><h2>Ask IBM Bob with the case in view</h2><p class="muted">Bob retrieves evidence from the local, read-only MCP server. It explains the deterministic result; it does not manufacture a score or attribution.</p><div id="bob-commands" class="stack"></div></article><article class="card"><p class="eyebrow">Tool preview</p><h2>Inspect the same facts</h2><p class="muted">This preview calls the same implementation exposed over MCP, so the dashboard and Bob remain consistent.</p><div id="mcp-tools" class="btn-row"></div><pre id="tool-output" class="tool-output">Choose a tool to inspect its grounded output.</pre></article></div></section>
+      </main>
     </div>
   </div>
-
-  <div id="toast" class="toast">Command copied to clipboard</div>
-
   <script>
-    let DATA = null;
-    let SELECTED_INCIDENT = null;
-    let CURRENT_TIMELINE = [];
-
-    function esc(s) {
-      return (s ?? '').toString().replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    let summary = null;
+    let selected = null;
+    let activeSource = 'all';
+    const SOURCE_LABELS = {siem:'SIEM',endpoint:'Endpoint',network_sensor:'Network sensor',threat_intel_report:'Threat intelligence'};
+    const CHECK_LABELS = {
+      minimum_behavior_evidence:['Multiple behavior observations','At least two ATT&CK-backed behavior observations were found.'],
+      multi_tactic_progression:['Coherent tactic progression','The case crosses multiple tactics with sufficient attack-flow coherence.'],
+      evidence_confidence:['Sufficient evidence confidence','Evidence quality and corroboration cleared the promotion threshold.'],
+      source_independence:['Independent source support','The story is supported across sufficiently independent telemetry sources.']
+    };
+    function esc(value) { return String(value ?? '').replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character])); }
+    function sourceLabel(source) { return SOURCE_LABELS[source] || source.replaceAll('_',' '); }
+    function timeLabel(timestamp) { return timestamp ? timestamp.slice(11,16) + ' UTC' : 'Unknown time'; }
+    function setStatus(message,isError=false) { const el=document.getElementById('status'); el.textContent=message; el.style.color=isError?'var(--rose)':'var(--moss-dark)'; }
+    function switchTab(next) { document.querySelectorAll('[role="tab"]').forEach(button => button.setAttribute('aria-selected',String(button.dataset.tab===next))); document.querySelectorAll('[role="tabpanel"]').forEach(panel => panel.classList.toggle('active',panel.id==='panel-'+next)); }
+    function renderQueue() {
+      const list=document.getElementById('case-list');
+      if (!summary.incidents.length) { list.innerHTML='<div class="empty">No cases currently meet the promotion boundary.</div>'; return; }
+      list.innerHTML=summary.incidents.map(incident => `<button class="case-item" data-case-id="${esc(incident.id)}" aria-current="${incident.id===selected?.id?'true':'false'}"><span class="case-row"><span class="case-id">${esc(incident.id)}</span><span class="priority ${incident.priority.toLowerCase()}">${esc(incident.priority)}</span></span><span class="case-desc">${esc(incident.techniques.map(item=>item.technique_name).filter((item,index,values)=>values.indexOf(item)===index).slice(0,2).join(' · '))}</span><span class="case-foot"><span>${esc(incident.confidence)}% confidence</span><span>${esc(incident.mission_impact)}/100 impact</span></span></button>`).join('');
+      list.querySelectorAll('[data-case-id]').forEach(button => button.addEventListener('click',()=>loadCase(button.dataset.caseId)));
     }
-
-    function showToast(msg) {
-      const t = document.getElementById('toast');
-      t.textContent = msg;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 2400);
+    async function boot() {
+      try { const response=await fetch('/api/summary'); if(!response.ok) throw new Error('Unable to load the analysis'); summary=await response.json(); if(summary.incidents.length) await loadCase(summary.incidents[0].id,false); else renderQueue(); setStatus(`Engine ${summary.metadata.engine_version} · ATT&CK ${summary.metadata.attack_kb_version} · ground truth excluded from runtime`); }
+      catch(error) { setStatus(error.message,true); document.getElementById('case-title').textContent='Analysis unavailable'; }
     }
-
-    function switchTab(tab) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-      document.getElementById('tab-' + tab).style.display = 'block';
-      event.currentTarget.classList.add('active');
+    async function loadCase(id,announce=true) { try { const response=await fetch('/api/incidents/'+encodeURIComponent(id)); if(!response.ok) throw new Error('Unable to load this case'); selected=await response.json(); activeSource='all'; renderQueue(); renderCase(); if(announce) setStatus(`Loaded case ${selected.id}.`); } catch(error) { setStatus(error.message,true); } }
+    function renderCase() {
+      const inc=selected, brief=inc.bluf;
+      document.getElementById('case-title').textContent=inc.id;
+      document.getElementById('case-summary').textContent=`${inc.record_ids.length} observations across ${inc.sources.length} source types. The case is ${inc.promotable?'ready for analyst review':'still a hypothesis'}.`;
+      document.getElementById('case-priority').textContent=`${inc.priority} · score ${inc.priority_score}/100`;
+      document.getElementById('decision-copy').textContent=brief.assessment;
+      const metrics=[['Evidence confidence',`${inc.confidence}%`,'How well available evidence supports this story.'],['Threat severity',`${inc.severity}/100`,'Potential harm represented by observed behavior.'],['Mission impact',`${inc.mission_impact}/100`,'Criticality of affected assets and mission role.'],['Urgency',`${inc.urgency}/100`,'How quickly this needs a human decision.']];
+      document.getElementById('metric-grid').innerHTML=metrics.map(([label,value,note])=>`<div class="metric"><span class="metric-label">${esc(label)}</span><strong class="metric-value">${esc(value)}</strong><span class="metric-note">${esc(note)}</span></div>`).join('');
+      document.getElementById('promotion-checks').innerHTML=Object.entries(inc.promotion_checks||{}).map(([key,passed])=>{const [label,detail]=CHECK_LABELS[key]||[key.replaceAll('_',' '),'Promotion check']; return `<li><span class="check-mark ${passed?'':'fail'}">${passed?'✓':'×'}</span><span><strong>${esc(label)}</strong><br><span class="check-detail">${esc(detail)}</span></span></li>`;}).join('');
+      const assets=[...new Map((inc.assets||[]).map(asset=>[asset.asset,asset])).values()];
+      document.getElementById('asset-context').innerHTML=assets.length?assets.map(asset=>`<p><strong>${esc(asset.asset)}</strong> · ${esc(asset.mission_role)}<br><span class="muted">Criticality ${esc(asset.criticality)}/100 · ${esc(asset.zone)}</span></p>`).join(''):'<p>No registered asset context was available.</p>';
+      document.getElementById('uncertainty-context').textContent=brief.uncertainty;
+      renderTimeline('overview-timeline',inc.evidence.slice(0,5)); renderFilters(); renderTimeline('full-timeline',inc.evidence); renderBrief(); renderBob();
     }
-
-    async function init() {
-      try {
-        const res = await fetch('/api/summary');
-        if (!res.ok) throw new Error('API request failed');
-        DATA = await res.json();
-        renderSummary();
-      } catch (err) {
-        document.getElementById('sel-id').textContent = 'Error loading telemetry: ' + err.message;
-      }
+    function renderTimeline(targetId,records) {
+      const target=document.getElementById(targetId), filtered=activeSource==='all'?records:records.filter(record=>record.source===activeSource);
+      target.innerHTML=filtered.length?filtered.map(record=>`<div class="timeline-item"><div class="time">${esc(timeLabel(record.timestamp))}</div><div class="evidence"><div class="evidence-head"><strong class="evidence-title">${esc(record.summary)}</strong><span class="source">${esc(sourceLabel(record.source))}</span></div>${record.technique?`<div class="technique">${esc(record.technique)} · ${esc(record.technique_name||'')}</div>`:''}${record.technique_reason?`<p class="evidence-reason">Why it matters: ${esc(record.technique_reason)}</p>`:''}</div></div>`).join(''):'<div class="empty">No evidence from this source appears in the selected case.</div>';
     }
-
-    function renderSummary() {
-      const d = DATA;
-      document.getElementById('kpi-raw').textContent = d.metrics.raw_records;
-      document.getElementById('kpi-cand').textContent = d.metrics.candidate_clusters;
-      document.getElementById('kpi-prom').textContent = d.metrics.promoted_incidents;
-      document.getElementById('kpi-comp').textContent = d.metrics.candidate_compression + '%';
-
-      let rows = '';
-      d.incidents.forEach((inc, idx) => {
-        const isSel = idx === 0 ? 'selected' : '';
-        rows += `
-          <tr class="${isSel}" onclick="selectIncident('${inc.id}', this)">
-            <td class="mono" style="font-weight:700;">${esc(inc.id)}</td>
-            <td><span class="pill ${inc.priority.toLowerCase()}">${esc(inc.priority)}</span></td>
-            <td class="mono">${inc.priority_score}</td>
-            <td class="mono">${inc.confidence}%</td>
-            <td class="mono">${inc.mission_impact}</td>
-            <td class="mono">${inc.attack_flow.score}</td>
-            <td>${inc.sources.map(s => `<span class="pill source">${esc(s.replace('_',' '))}</span>`).join(' ')}</td>
-          </tr>
-        `;
-      });
-      document.getElementById('incident-rows').innerHTML = rows;
-
-      if (d.incidents.length > 0) {
-        loadIncidentDetail(d.incidents[0].id);
-      }
+    function renderFilters() { const sourceSet=[...new Set(selected.evidence.map(record=>record.source))], filters=['all',...sourceSet], target=document.getElementById('source-filters'); target.innerHTML=filters.map(source=>`<button class="filter" data-source="${esc(source)}" aria-pressed="${source===activeSource}">${source==='all'?'All evidence':esc(sourceLabel(source))}</button>`).join(''); target.querySelectorAll('[data-source]').forEach(button=>button.addEventListener('click',()=>{activeSource=button.dataset.source;renderFilters();renderTimeline('full-timeline',selected.evidence);})); }
+    function renderBrief() { const brief=selected.bluf, sections=[['Bottom line',brief.bottom_line],['Assessment',brief.assessment],['Actor context',brief.actor_assessment],['Uncertainty and visibility gaps',brief.uncertainty]]; document.getElementById('brief-content').innerHTML=sections.map(([label,value])=>`<section class="brief-section"><div class="brief-label">${esc(label)}</div><div>${esc(value)}</div></section>`).join(''); document.getElementById('response-actions').innerHTML=(selected.runbook||[]).map(step=>`<li class="action-item"><strong>${esc(step.phase)} · ${esc(step.priority)}</strong><span>${esc(step.action)}</span><span>Target: ${esc(step.target)}</span></li>`).join(''); }
+    function briefText() { const brief=selected.bluf; return `# Commander Brief — ${selected.id}\n\n## Bottom line\n${brief.bottom_line}\n\n## Assessment\n${brief.assessment}\n\n## Actor context\n${brief.actor_assessment}\n\n## Uncertainty\n${brief.uncertainty}\n\n## Recommended actions\n${brief.recommended_actions.map((action,index)=>`${index+1}. ${action}`).join('\n')}`; }
+    async function copyText(text,success) { try { await navigator.clipboard.writeText(text); setStatus(success); } catch { setStatus('Clipboard access was unavailable. Select and copy the text manually.',true); } }
+    function exportBrief() { const blob=new Blob([briefText()],{type:'text/markdown'}), url=URL.createObjectURL(blob), anchor=document.createElement('a'); anchor.href=url; anchor.download=`${selected.id}_commander_brief.md`; anchor.click(); URL.revokeObjectURL(url); setStatus('Commander brief exported.'); }
+    function renderBob() {
+      const commands=[['/investigate','Retrieve the evidence chain, risk factors, gaps, and analyst next steps.'],['/explain','Explain why the case was prioritised without changing the deterministic score.'],['/bluf','Turn grounded case facts into a commander-ready summary.'],['/runbook','Retrieve staged containment, eradication, and detection-engineering actions.']];
+      document.getElementById('bob-commands').innerHTML=commands.map(([command,detail])=>`<div class="mcp-command"><div><code>${esc(command)} ${esc(selected.id)}</code><div class="muted" style="font-size:12px;margin-top:4px;">${esc(detail)}</div></div><button class="button secondary" data-copy-command="${esc(command)} ${esc(selected.id)}">Copy</button></div>`).join('');
+      document.querySelectorAll('[data-copy-command]').forEach(button=>button.addEventListener('click',()=>copyText(button.dataset.copyCommand,'Bob command copied.')));
+      const tools=[['get_incident','Case facts'],['explain_risk','Risk rationale'],['get_detection_gaps','Visibility gaps'],['generate_bluf','Brief'],['get_remediation_runbook','Runbook']];
+      document.getElementById('mcp-tools').innerHTML=tools.map(([tool,label])=>`<button class="button secondary" data-tool="${esc(tool)}">${esc(label)}</button>`).join(''); document.querySelectorAll('[data-tool]').forEach(button=>button.addEventListener('click',()=>runTool(button.dataset.tool)));
     }
-
-    async function selectIncident(id, tr) {
-      document.querySelectorAll('.incident-table tr').forEach(r => r.classList.remove('selected'));
-      tr.classList.add('selected');
-      loadIncidentDetail(id);
-    }
-
-    async function loadIncidentDetail(id) {
-      try {
-        const res = await fetch('/api/incidents/' + id);
-        if (!res.ok) throw new Error('Failed to fetch incident');
-        SELECTED_INCIDENT = await res.json();
-        renderIncidentView();
-      } catch (err) {
-        console.error(err);
-      }
-    }
-
-    function renderIncidentView() {
-      const inc = SELECTED_INCIDENT;
-      if (!inc) return;
-
-      document.getElementById('sel-id').textContent = inc.id;
-      document.getElementById('sel-summary').textContent = `${inc.record_ids.length} Correlated Events · ${inc.sources.join(', ')}`;
-      document.getElementById('sel-priority-pill').innerHTML = `<span class="pill ${inc.priority.toLowerCase()}" style="font-size:13px; padding:6px 12px;">${inc.priority} PRIORITY</span>`;
-
-      // Metrics
-      document.getElementById('sel-conf').textContent = inc.confidence + '%';
-      document.getElementById('sel-conf-bar').style.width = inc.confidence + '%';
-      document.getElementById('sel-sev').textContent = inc.severity + '/100';
-      document.getElementById('sel-sev-bar').style.width = inc.severity + '%';
-      document.getElementById('sel-imp').textContent = inc.mission_impact + '/100';
-      document.getElementById('sel-imp-bar').style.width = inc.mission_impact + '%';
-      document.getElementById('sel-urg').textContent = inc.urgency + '/100';
-      document.getElementById('sel-urg-bar').style.width = inc.urgency + '%';
-
-      // Risk factors
-      let rfHtml = '';
-      for (const [k, v] of Object.entries(inc.risk_factors)) {
-        rfHtml += `
-          <div style="margin-bottom:8px;">
-            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:2px;">
-              <span>${esc(k.replaceAll('_',' '))}</span>
-              <span class="mono">${v}%</span>
-            </div>
-            <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:2px;">
-              <div style="height:100%; width:${Math.min(100, v)}%; background:var(--cyan); border-radius:2px;"></div>
-            </div>
-          </div>
-        `;
-      }
-      document.getElementById('risk-factors-bars').innerHTML = rfHtml;
-
-      // Assets
-      let assetHtml = inc.assets && inc.assets.length ? inc.assets.map(a => 
-        `<div>🎯 <b>${esc(a.asset)}</b> (Criticality: ${a.criticality}/100) — ${esc(a.mission_role)} [${esc(a.zone)}]</div>`
-      ).join('') : '<span style="color:var(--text-muted)">No registered critical asset in cluster</span>';
-      document.getElementById('asset-context-list').innerHTML = assetHtml;
-
-      // Actor
-      let actorHtml = inc.actor_similarity && inc.actor_similarity.length ? inc.actor_similarity.slice(0, 2).map(act =>
-        `<div>Historical behavioral consistency: <b>${esc(act.group)}</b> (${act.similarity}% similarity, shared: ${act.shared_techniques.join(', ')}). <i>Note: Not attribution.</i></div>`
-      ).join('') : 'No distinctive historical threat actor technique profile.';
-      document.getElementById('actor-context').innerHTML = actorHtml;
-
-      // Attack flow
-      document.getElementById('flow-score-badge').textContent = 'Coherence Score: ' + inc.attack_flow.score;
-      document.getElementById('flow-stat-progressions').textContent = 'Strict Progressions: ' + inc.attack_flow.strict_progressions;
-      document.getElementById('flow-stat-backtracks').textContent = 'Backtracks: ' + inc.attack_flow.backtracks;
-      document.getElementById('flow-stat-unobserved').textContent = 'Unobserved Tactics: ' + (inc.attack_flow.unobserved_intermediate_tactics.length ? inc.attack_flow.unobserved_intermediate_tactics.join(', ') : 'None');
-
-      let killHtml = '';
-      inc.techniques.forEach((t, i) => {
-        killHtml += `
-          <div class="chain-node active">
-            <div class="chain-phase">${esc(t.tactic)}</div>
-            <div class="chain-tech">${esc(t.technique)}</div>
-            <div class="chain-name">${esc(t.technique_name)}</div>
-          </div>
-        `;
-        if (i < inc.techniques.length - 1) {
-          killHtml += '<div class="chain-arrow">➔</div>';
-        }
-      });
-      document.getElementById('kill-chain-nodes').innerHTML = killHtml || '<div style="color:var(--text-muted)">No technique progression</div>';
-
-      // BLUF
-      const b = inc.bluf;
-      document.getElementById('bluf-bottom-line').textContent = b.bottom_line;
-      document.getElementById('bluf-assessment').textContent = b.assessment;
-      document.getElementById('bluf-actor').textContent = b.actor_assessment;
-      document.getElementById('bluf-uncertainty').textContent = b.uncertainty;
-
-      // Runbook
-      let rbHtml = '';
-      (inc.runbook || []).forEach((step, idx) => {
-        rbHtml += `
-          <div class="runbook-step">
-            <div class="step-header">
-              <span class="step-phase">${idx+1}. ${esc(step.phase)}</span>
-              <span class="pill ${step.priority === 'Immediate' ? 'p1' : 'p2'}">${esc(step.priority)}</span>
-            </div>
-            <div style="font-weight:600; margin-bottom:4px;">${esc(step.action)}</div>
-            <div class="step-target">Target: ${esc(step.target)}</div>
-          </div>
-        `;
-      });
-      document.getElementById('runbook-steps').innerHTML = rbHtml || '<div style="color:var(--text-muted)">No action steps</div>';
-
-      // Timeline
-      CURRENT_TIMELINE = inc.evidence;
-      renderTimeline(CURRENT_TIMELINE);
-    }
-
-    function renderTimeline(evts) {
-      let tHtml = '';
-      evts.forEach(e => {
-        tHtml += `
-          <div class="timeline-item">
-            <div class="timeline-dot"></div>
-            <div class="timeline-time">${esc(e.timestamp.replace('T', ' ').replace('Z', ' UTC'))}</div>
-            <div class="timeline-title">${esc(e.summary)}</div>
-            <div class="timeline-meta">
-              <span class="pill source">${esc(e.source)}</span>
-              <span class="mono" style="font-size:11px; color:var(--text-muted);">${esc(e.record_id)}</span>
-              ${e.technique ? `<span class="badge" style="font-size:10px;">${esc(e.technique)} (${Math.round(e.technique_confidence*100)}%)</span>` : ''}
-              ${e.ioc_evidence ? `<span class="pill p1" style="font-size:10px;">IOC CORROBORATED</span>` : ''}
-            </div>
-            ${e.technique_reason ? `<div class="timeline-body" style="margin-top:4px;">${esc(e.technique_reason)}</div>` : ''}
-          </div>
-        `;
-      });
-      document.getElementById('timeline-container').innerHTML = tHtml;
-    }
-
-    function filterTimeline(source) {
-      if (source === 'all') {
-        renderTimeline(CURRENT_TIMELINE);
-      } else {
-        renderTimeline(CURRENT_TIMELINE.filter(e => e.source === source));
-      }
-    }
-
-    function copyBobCommand(cmd) {
-      navigator.clipboard.writeText(cmd);
-      showToast('Copied: ' + cmd);
-    }
-
-    function copyBlufText() {
-      if (!SELECTED_INCIDENT) return;
-      const b = SELECTED_INCIDENT.bluf;
-      const text = `COMMANDER BLUF — ${SELECTED_INCIDENT.id}\n\nBOTTOM LINE:\n${b.bottom_line}\n\nASSESSMENT:\n${b.assessment}\n\nACTOR CONSISTENCY:\n${b.actor_assessment}\n\nUNCERTAINTY / GAPS:\n${b.uncertainty}\n\nACTIONS:\n${b.recommended_actions.map((a,i)=>`${i+1}. ${a}`).join('\n')}`;
-      navigator.clipboard.writeText(text);
-      showToast('Commander BLUF copied to clipboard');
-    }
-
-    function exportReport() {
-      if (!SELECTED_INCIDENT) return;
-      const b = SELECTED_INCIDENT.bluf;
-      const text = `# COMMANDER INCIDENT BRIEFING — ${SELECTED_INCIDENT.id}\n\n**Generated:** ${new Date().toISOString()}\n**Priority:** ${SELECTED_INCIDENT.priority} (Score: ${SELECTED_INCIDENT.priority_score}/100)\n**Evidence Confidence:** ${SELECTED_INCIDENT.confidence}%\n**Mission Impact:** ${SELECTED_INCIDENT.mission_impact}/100\n\n## Bottom Line\n${b.bottom_line}\n\n## Assessment\n${b.assessment}\n\n## Actor Consistency\n${b.actor_assessment}\n\n## Uncertainty & Detection Gaps\n${b.uncertainty}\n\n## Remediation Runbook\n${(SELECTED_INCIDENT.runbook || []).map((s, i) => `### ${i+1}. [${s.phase}] ${s.action}\n- **Priority:** ${s.priority}\n- **Target System:** ${s.target}`).join('\n\n')}\n`;
-      const blob = new Blob([text], { type: 'text/markdown' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${SELECTED_INCIDENT.id}_BLUF_Report.md`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('Report exported successfully');
-    }
-
-    async function runMcpTool(toolName) {
-      const out = document.getElementById('terminal-out');
-      out.textContent = `Executing MCP tool "${toolName}" over JSON-RPC stdio simulation...\n`;
-      try {
-        const iid = SELECTED_INCIDENT ? SELECTED_INCIDENT.id : 'INC-CAND-09226FFA';
-        const res = await fetch(`/api/mcp-query?tool=${toolName}&incident_id=${iid}`);
-        const data = await res.json();
-        out.textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        out.textContent = `Error executing MCP tool: ${err.message}`;
-      }
-    }
-
-    window.addEventListener('DOMContentLoaded', init);
+    async function runTool(tool) { const output=document.getElementById('tool-output'); output.textContent=`Retrieving ${tool}…`; try { const parameters=new URLSearchParams({tool,incident_id:selected.id}), response=await fetch('/api/mcp-query?'+parameters.toString()), payload=await response.json(); output.textContent=JSON.stringify(payload,null,2); } catch(error) { output.textContent=`Unable to retrieve tool output: ${error.message}`; } }
+    document.querySelectorAll('[role="tab"]').forEach(button=>button.addEventListener('click',()=>switchTab(button.dataset.tab)));
+    document.getElementById('copy-brief').addEventListener('click',()=>copyText(briefText(),'Commander brief copied.'));
+    document.getElementById('export-brief').addEventListener('click',exportBrief);
+    boot();
   </script>
 </body>
-</html>
-'''
+</html>'''
+
+
+def _with_presentation_fields(incident: dict) -> dict:
+    """Add derived read-only presentation fields without changing engine state."""
+    incident["bluf"] = bluf(incident)
+    incident["runbook"] = remediation_runbook(incident)
+    return incident
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -732,23 +231,24 @@ def index() -> str:
     return INDEX
 
 
+@app.get("/healthz")
+def healthz() -> dict:
+    return {"status": "ok", "service": "threatfusion", "version": app.version}
+
+
 @app.get("/api/summary")
 def summary() -> dict:
-    d = analyze(ROOT)
-    promoted = promoted_incidents(d)
-    for x in promoted:
-        x["bluf"] = bluf(x)
-        x["runbook"] = remediation_runbook(x)
-    raw = len(d["records"])
-    candidate_count = len(d["incidents"])
-    compression = round(100 * (1 - candidate_count / max(1, raw)), 1)
+    analysis = analyze(ROOT)
+    promoted = [_with_presentation_fields(incident) for incident in promoted_incidents(analysis)]
+    raw_count = len(analysis["records"])
+    candidate_count = len(analysis["incidents"])
     return {
-        "metadata": d["metadata"],
+        "metadata": analysis["metadata"],
         "metrics": {
-            "raw_records": raw,
+            "raw_records": raw_count,
             "candidate_clusters": candidate_count,
             "promoted_incidents": len(promoted),
-            "candidate_compression": compression,
+            "candidate_compression": round(100 * (1 - candidate_count / max(1, raw_count)), 1),
         },
         "incidents": promoted[:12],
     }
@@ -756,33 +256,31 @@ def summary() -> dict:
 
 @app.get("/api/incidents/{incident_id}")
 def incident(incident_id: str) -> dict:
-    d = analyze(ROOT)
-    for x in promoted_incidents(d):
-        if x["id"] == incident_id:
-            x["bluf"] = bluf(x)
-            x["runbook"] = remediation_runbook(x)
-            return x
+    analysis = analyze(ROOT)
+    for candidate in promoted_incidents(analysis):
+        if candidate["id"] == incident_id:
+            return _with_presentation_fields(candidate)
     raise HTTPException(status_code=404, detail="Incident not found")
 
 
 @app.get("/api/evaluation")
 def evaluation() -> dict:
-    # Kept separate from runtime promotion: does not expose ground-truth records
-    d = analyze(ROOT)
+    analysis = analyze(ROOT)
     return {
-        "engine_version": d["metadata"]["engine_version"],
-        "attack_kb_version": d["metadata"]["attack_kb_version"],
-        "candidate_clusters": len(d["incidents"]),
-        "promoted_incidents": len(promoted_incidents(d)),
+        "engine_version": analysis["metadata"]["engine_version"],
+        "attack_kb_version": analysis["metadata"]["attack_kb_version"],
+        "candidate_clusters": len(analysis["incidents"]),
+        "promoted_incidents": len(promoted_incidents(analysis)),
     }
 
 
 @app.get("/api/mcp-query")
-def mcp_query(tool: str = Query(...), incident_id: str = Query(None), query: str = Query(None)) -> dict:
+def mcp_query(tool: str = Query(...), incident_id: str | None = Query(None), query: str | None = Query(None)) -> dict:
     from src.mcp_server import tool_call
-    args = {}
+
+    arguments: dict[str, str] = {}
     if incident_id:
-        args["incident_id"] = incident_id
+        arguments["incident_id"] = incident_id
     if query:
-        args["query"] = query
-    return tool_call(tool, args)
+        arguments["query"] = query
+    return tool_call(tool, arguments)

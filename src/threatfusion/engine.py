@@ -21,6 +21,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+ENGINE_VERSION = "2.1.0"
+
 TACTIC_ORDER = [
     "reconnaissance", "resource-development", "initial-access", "execution",
     "persistence", "privilege-escalation", "defense-evasion", "credential-access",
@@ -107,6 +109,32 @@ def text_of(r: dict[str, Any]) -> str:
     return json.dumps(r, sort_keys=True, ensure_ascii=False).lower()
 
 
+def _canonical_entity_value(entity_type: str, value: Any) -> str:
+    """Return a stable correlation key without losing the source record.
+
+    Endpoint and identity systems commonly disagree only in casing or whitespace.
+    Canonicalising at the entity boundary prevents those harmless schema differences
+    from fragmenting an otherwise coherent candidate hypothesis.
+    """
+    cleaned = str(value).strip()
+    if entity_type == "host":
+        return cleaned.upper().rstrip(".")
+    if entity_type in {"user", "ip", "ioc"}:
+        return cleaned.lower().rstrip(".")
+    return cleaned
+
+
+def _as_string_list(value: Any) -> list[str]:
+    """Normalize optional indicator fields without accidentally iterating a string."""
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, (list, tuple, set)):
+        return [str(item) for item in value if item is not None]
+    return [str(value)]
+
+
 def extract_entities(r: dict[str, Any]) -> list[tuple[str, str]]:
     """Extract correlation entities.
 
@@ -118,33 +146,46 @@ def extract_entities(r: dict[str, Any]) -> list[tuple[str, str]]:
     ents: list[tuple[str, str]] = []
     for k in ("host", "src_host", "dst_host"):
         if r.get(k):
-            ents.append(("host", str(r[k])))
+            ents.append(("host", _canonical_entity_value("host", r[k])))
     if r.get("user"):
-        ents.append(("user", str(r["user"])))
+        ents.append(("user", _canonical_entity_value("user", r["user"])))
     for k in ("src_ip", "dst_ip"):
         if r.get(k):
-            ents.append(("ip", str(r[k])))
+            ents.append(("ip", _canonical_entity_value("ip", r[k])))
 
     t = text_of(r)
     for token in IOC_RE.findall(r.get("text", "")):
-        ents.append(("ip", token))
+        ents.append(("ip", _canonical_entity_value("ip", token)))
 
-    explicit_iocs = set(str(v) for v in (r.get("ioc") or r.get("iocs") or []))
-    if isinstance(r.get("ioc"), str):
-        explicit_iocs.add(r["ioc"])
+    explicit_iocs = {
+        _canonical_entity_value("ioc", indicator)
+        for key in ("ioc", "iocs")
+        for indicator in _as_string_list(r.get(key))
+    }
+    for indicator in explicit_iocs:
+        ents.append(("ioc", indicator))
     for token in IOC_RE.findall(t):
-        if token in explicit_iocs:
-            ents.append(("ioc", token))
+        canonical = _canonical_entity_value("ioc", token)
+        if canonical in explicit_iocs:
+            ents.append(("ioc", canonical))
 
     # Threat-intel reports are authoritative only for the indicators they explicitly mention.
     if r.get("source") == "threat_intel_report":
         for token in IOC_RE.findall(r.get("text", "")):
-            ents.append(("ioc", token))
+            ents.append(("ioc", _canonical_entity_value("ioc", token)))
 
     return list(dict.fromkeys(ents))
 
 
 def normalize(r: dict[str, Any]) -> dict[str, Any]:
+    missing = [field for field in ("_id", "timestamp") if not r.get(field)]
+    if missing:
+        raise ValueError(f"Record is missing required field(s): {', '.join(missing)}")
+    try:
+        parse_ts(str(r["timestamp"]))
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Record {r['_id']} has an invalid timestamp: {r['timestamp']!r}") from exc
+
     ents = extract_entities(r)
     hosts = [v for k, v in ents if k == "host"]
     users = [v for k, v in ents if k == "user"]
@@ -169,7 +210,9 @@ def temporal_decay(minutes: float, tau: float = 30.0) -> float:
 
 
 def _shared_indicator(a: dict[str, Any], b: dict[str, Any]) -> bool:
-    shared_ip = {v for k, v in set(a["entities"]) & set(b["entities"]) if k in {"ip", "ioc"}}
+    a_ips = {v for k, v in a["entities"] if k in {"ip", "ioc"}}
+    b_ips = {v for k, v in b["entities"] if k in {"ip", "ioc"}}
+    shared_ip = a_ips & b_ips
     a_ioc = {v for k, v in a["entities"] if k == "ioc"}
     b_ioc = {v for k, v in b["entities"] if k == "ioc"}
     return bool(shared_ip & (a_ioc | b_ioc))
@@ -220,7 +263,7 @@ def candidate_clusters(norm: list[dict[str, Any]], threshold: float = 0.38) -> l
                 for j in range(i + 1, len(indices)):
                     candidate_pairs.add((min(indices[i], indices[j]), max(indices[i], indices[j])))
 
-    for i, j in candidate_pairs:
+    for i, j in sorted(candidate_pairs):
         strength, _ = edge_strength(norm[i], norm[j])
         if strength >= threshold:
             d.union(norm[i]["id"], norm[j]["id"])
@@ -349,13 +392,15 @@ def source_independence(cluster: list[dict[str, Any]]) -> float:
 
 def asset_criticality(cluster: list[dict[str, Any]], assets: dict[str, Any]) -> tuple[int, list[dict[str, Any]]]:
     hits = []
+    seen_assets: set[str] = set()
     for r in cluster:
         candidates = list(r["hosts"])
         candidates += [r["raw"].get("src_host"), r["raw"].get("dst_host")]
         for host in candidates:
-            if host and host in assets:
+            if host and host in assets and host not in seen_assets:
                 meta = assets[host]
                 hits.append({"asset": host, **meta})
+                seen_assets.add(host)
     if not hits:
         return 45, []
     return max(int(x.get("criticality", 45)) for x in hits), hits
@@ -404,6 +449,30 @@ def actor_similarity(observed: list[str], edges: list[dict[str, Any]]) -> list[d
     return sorted(out, key=lambda x: -x["similarity"])[:5]
 
 
+def actor_assessment(matches: list[dict[str, Any]]) -> str:
+    """Describe historical technique overlap without implying actor attribution.
+
+    A tied similarity score is not a meaningful discriminator. Present it as an
+    ambiguity rather than letting source-file order select an arbitrary actor name.
+    """
+    if not matches:
+        return "No sufficiently distinctive historical behavior profile was identified; this is not attribution."
+    best = matches[0]
+    close_matches = [m for m in matches if abs(m["similarity"] - best["similarity"]) < 5]
+    if len(close_matches) > 1:
+        names = ", ".join(m["group"] for m in close_matches[:3])
+        return (
+            f"Observed techniques overlap with multiple historical groups ({names}); "
+            "the available evidence does not differentiate an actor and is not attribution."
+        )
+    if best["similarity"] < 60:
+        return "Technique overlap is too weak for a useful historical behavior comparison; this is not attribution."
+    return (
+        f"Observed behavior has the strongest historical overlap with {best['group']} "
+        f"({best['similarity']} similarity); this is context, not attribution."
+    )
+
+
 def _ioc_specificity(cluster: list[dict[str, Any]]) -> float:
     ioc_count = sum(1 for r in cluster if any(k == "ioc" for k, _ in r["entities"]))
     return min(1.0, ioc_count / 2.0)
@@ -441,6 +510,7 @@ def score_cluster(cluster: list[dict[str, Any]], techniques: dict[str, Any], edg
             "source": r["source"],
             "summary": summarize_record(r["raw"]),
             "technique": tid,
+            "technique_name": techniques[tid].get("name", tid) if tid else None,
             "technique_confidence": tc,
             "technique_reason": why,
             "source_credibility": r["source_credibility"],
@@ -450,6 +520,13 @@ def score_cluster(cluster: list[dict[str, Any]], techniques: dict[str, Any], edg
         evidence.append(provenance)
 
     iid = "INC-CAND-" + hashlib.sha1("|".join(sorted(r["id"] for r in cluster)).encode()).hexdigest()[:8].upper()
+    distinct_tactics = {event["tactic"] for event in tech_events}
+    promotion_checks = {
+        "minimum_behavior_evidence": len(tech_events) >= 2,
+        "multi_tactic_progression": len(distinct_tactics) >= 2 and flow["score"] >= 0.50,
+        "evidence_confidence": confidence >= 0.55,
+        "source_independence": src_ind >= 0.50,
+    }
     return {
         "id": iid,
         "record_ids": [r["id"] for r in cluster],
@@ -460,7 +537,8 @@ def score_cluster(cluster: list[dict[str, Any]], techniques: dict[str, Any], edg
         "urgency": urgency,
         "priority_score": priority_score,
         "priority": priority,
-        "promotable": bool(len(tech_events) >= 2 and flow["score"] >= 0.50 and confidence >= 0.55 and src_ind >= 0.50),
+        "promotable": all(promotion_checks.values()),
+        "promotion_checks": promotion_checks,
         "technique_count": len(tech_events),
         "techniques": tech_events,
         "attack_flow": flow,
@@ -494,6 +572,11 @@ def summarize_record(raw: dict[str, Any]) -> str:
 
 def analyze(root: Path) -> dict[str, Any]:
     records, techniques, groups, edges, assets = load_context(str(root.resolve()))
+    if not isinstance(records, list):
+        raise ValueError("demo_alerts.json must contain a JSON list of observations")
+    record_ids = [record.get("_id") for record in records]
+    if len(record_ids) != len(set(record_ids)):
+        raise ValueError("demo_alerts.json contains duplicate observation IDs")
     norm = [normalize(r) for r in records]
     clusters = candidate_clusters(norm)
     incidents = [score_cluster(c, techniques, edges, assets) for c in clusters]
@@ -507,7 +590,7 @@ def analyze(root: Path) -> dict[str, Any]:
         "edges": edges,
         "assets": assets,
         "metadata": {
-            "engine_version": "2.0.0",
+            "engine_version": ENGINE_VERSION,
             "attack_kb_version": "v19.2",
             "ground_truth_used_for_runtime": False,
         },
@@ -562,12 +645,7 @@ def remediation_runbook(inc: dict[str, Any]) -> list[dict[str, Any]]:
 
 def bluf(inc: dict[str, Any]) -> dict[str, Any]:
     techniques = ", ".join(dict.fromkeys(e["technique"] + " " + e["technique_name"] for e in inc["techniques"])) or "No high-confidence ATT&CK technique"
-    actor = inc["actor_similarity"][0] if inc["actor_similarity"] else None
-    actor_line = (
-        f"Observed behavior is historically consistent with {actor['group']} ({actor['similarity']} similarity); this is not attribution."
-        if actor else
-        "No sufficiently distinctive actor pattern was identified."
-    )
+    actor_line = actor_assessment(inc["actor_similarity"])
     actions = []
     if inc["mission_impact"] >= 80:
         actions.append("Prioritize containment of the affected mission-critical asset.")
