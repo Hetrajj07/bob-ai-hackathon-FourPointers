@@ -31,7 +31,7 @@ ThreatFusion first creates **candidate hypotheses** using weighted entity relati
 
 ## Demo Dataset & ATT&CK Reference
 
-The bundled demo contains **37 synthetic observations** from four source types (SIEM, endpoint sensor, network telemetry, and CTI advisory) and produces **2 candidate hypotheses**; the engine promotes **1** evidence-backed incident. The second candidate is deliberately weak and is not promoted.
+The bundled demo contains **62 synthetic observations** from four source types (SIEM, endpoint sensor, network telemetry, and CTI advisory) spanning three attack days. The engine produces **5 candidate hypotheses** and promotes **4** evidence-backed incidents (3× P1, 1× P2). The fifth candidate is deliberately weak and is not promoted.
 The bundled MITRE ATT&CK reference data is sourced from the **MITRE ATT&CK v19.2** release (August 2026 update), providing structured techniques, tactics, groups, and sub-technique mappings.
 
 ## Tech Stack

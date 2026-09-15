@@ -1,6 +1,9 @@
 {
-  "ENG-DB01": {"criticality": 95, "mission_role": "Engineering database", "zone": "mission-critical"},
-  "ENG-WKS17": {"criticality": 82, "mission_role": "Engineering workstation", "zone": "engineering"},
-  "VPN-GW01": {"criticality": 90, "mission_role": "Remote access gateway", "zone": "perimeter"},
-  "FIN-LT22": {"criticality": 58, "mission_role": "Finance endpoint", "zone": "corporate"}
+  "ENG-DB01":  {"criticality": 95, "mission_role": "Engineering database",         "zone": "mission-critical"},
+  "ENG-WKS17": {"criticality": 82, "mission_role": "Engineering workstation",      "zone": "engineering"},
+  "VPN-GW01":  {"criticality": 90, "mission_role": "Remote access gateway",        "zone": "perimeter"},
+  "FIN-LT22":  {"criticality": 58, "mission_role": "Finance endpoint",             "zone": "corporate"},
+  "FIN-SRV01": {"criticality": 88, "mission_role": "Finance application server",   "zone": "finance"},
+  "HR-WKS03":  {"criticality": 65, "mission_role": "HR workstation",               "zone": "corporate"},
+  "CORE-SW01": {"criticality": 78, "mission_role": "Core network switch",          "zone": "infrastructure"}
 }

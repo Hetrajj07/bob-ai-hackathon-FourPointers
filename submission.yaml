@@ -43,8 +43,7 @@ submission:
   known_limitations: >
     The prototype uses synthetic telemetry and a bundled ATT&CK reference snapshot. It is an
     evidence-backed hackathon prototype with production-oriented architecture, not a production SOC,
-    and does not perform autonomous containment or real actor attribution. Hosted video link is
-    pending external upload prior to final submission.
+    and does not perform autonomous containment or real actor attribution.
 
 artifacts:
   source_code: "src/"

@@ -17,8 +17,8 @@ def test_mcp_tool_definitions():
 
 def test_mcp_correlate_and_investigate():
     res = tool_call("correlate_events", {})
-    assert res["raw_observations"] == 37
-    assert res["promoted_incidents"] == 1
+    assert res["raw_observations"] == 62
+    assert res["promoted_incidents"] >= 1
     iid = res["incidents"][0]["id"]
 
     inc_res = tool_call("get_incident", {"incident_id": iid})

@@ -348,5 +348,148 @@
     "process": "excel.exe",
     "parent_process": "explorer.exe",
     "_id": "REC-0028"
-  }
+  },
+
+  
+  { "_id": "REC-0101", "source": "threat_intel_report", "format": "text",
+    "timestamp": "2026-09-16T09:00:00Z",
+    "text": "Campaign report: 91.195.240.44 identified as active C2 endpoint used by a nation-state intrusion set targeting VPN appliances via spear-phishing document lures.",
+    "attack_id_hint": "T1566.001" },
+
+  { "_id": "REC-0102", "source": "siem", "format": "json",
+    "timestamp": "2026-09-16T09:02:00Z",
+    "event_type": "email_attachment_opened",
+    "user": "tnair", "host": "VPN-GW01",
+    "detail": "winword.exe opened attachment vpn_config_update.docm" },
+
+  { "_id": "REC-0103", "source": "endpoint", "format": "json",
+    "timestamp": "2026-09-16T09:03:00Z",
+    "host": "VPN-GW01", "process": "powershell.exe",
+    "parent_process": "winword.exe",
+    "cmdline": "-enc SUVYIChOZXctT2JqZWN0IE5ldC5XZWJDbGllbnQpLkRvd24..." },
+
+  { "_id": "REC-0104", "source": "threat_intel_report", "format": "text",
+    "timestamp": "2026-09-16T09:05:00Z",
+    "text": "IOC match: 91.195.240.44 confirmed C2 infrastructure, confidence high, category: command-and-control beacon.",
+    "attack_id_hint": null },
+
+  { "_id": "REC-0105", "source": "network_sensor", "format": "json",
+    "timestamp": "2026-09-16T09:06:00Z",
+    "src_ip": "10.10.1.5", "dst_ip": "91.195.240.44",
+    "dst_port": 443, "protocol": "HTTPS", "host": "VPN-GW01" },
+
+  { "_id": "REC-0106", "source": "siem", "format": "json",
+    "timestamp": "2026-09-16T09:18:00Z",
+    "event_type": "remote_logon",
+    "user": "tnair", "src_host": "VPN-GW01", "dst_host": "CORE-SW01",
+    "detail": "admin share access from VPN gateway to CORE-SW01 via SMB",
+    "protocol": "SMB" },
+
+  { "_id": "REC-0107", "source": "network_sensor", "format": "json",
+    "timestamp": "2026-09-16T09:19:00Z",
+    "src_ip": "10.10.1.5", "dst_ip": "10.10.1.200",
+    "dst_port": 445, "protocol": "SMB", "host": "VPN-GW01" },
+
+  { "_id": "REC-0108", "source": "network_sensor", "format": "json",
+    "timestamp": "2026-09-16T09:32:00Z",
+    "src_ip": "10.10.1.5", "dst_ip": "91.195.240.44",
+    "dst_port": 22, "protocol": "TCP", "source": "network_sensor",
+    "host": "VPN-GW01" },
+
+  { "_id": "REC-0109", "source": "endpoint", "format": "json",
+    "timestamp": "2026-09-16T09:33:00Z",
+    "host": "VPN-GW01", "process": "scp.exe",
+    "parent_process": "powershell.exe",
+    "detail": "large outbound file transfer over SSH to 91.195.240.44" },
+
+
+  { "_id": "REC-0201", "source": "threat_intel_report", "format": "text",
+    "timestamp": "2026-09-16T14:00:00Z",
+    "text": "Advisory: 45.142.212.100 attributed to ransomware-as-a-service group targeting financial sector endpoints via macro-enabled Excel lures.",
+    "attack_id_hint": "T1566.001" },
+
+  { "_id": "REC-0202", "source": "siem", "format": "json",
+    "timestamp": "2026-09-16T14:02:00Z",
+    "event_type": "email_attachment_opened",
+    "user": "kpatel", "host": "FIN-LT22",
+    "detail": "excel.exe opened attachment salary_revision_Oct.xlsm" },
+
+  { "_id": "REC-0203", "source": "endpoint", "format": "json",
+    "timestamp": "2026-09-16T14:03:00Z",
+    "host": "FIN-LT22", "process": "powershell.exe",
+    "parent_process": "excel.exe",
+    "cmdline": "-enc JABjAGwAaQBlAG4AdAAgAD0A..." },
+
+  { "_id": "REC-0204", "source": "network_sensor", "format": "json",
+    "timestamp": "2026-09-16T14:04:00Z",
+    "src_ip": "10.10.9.88", "dst_ip": "45.142.212.100",
+    "dst_port": 443, "protocol": "HTTPS", "host": "FIN-LT22" },
+
+  { "_id": "REC-0205", "source": "threat_intel_report", "format": "text",
+    "timestamp": "2026-09-16T14:06:00Z",
+    "text": "IOC match: 45.142.212.100 confirmed active C2, associated with pre-ransomware staging and credential harvesting.",
+    "attack_id_hint": null },
+
+  { "_id": "REC-0206", "source": "endpoint", "format": "json",
+    "timestamp": "2026-09-16T14:12:00Z",
+    "host": "FIN-LT22", "process": "lsass_dump_tool.exe",
+    "detail": "credential access attempt against lsass.exe — NTLM hashes extracted" },
+
+  { "_id": "REC-0207", "source": "siem", "format": "json",
+    "timestamp": "2026-09-16T14:21:00Z",
+    "event_type": "remote_logon",
+    "user": "kpatel", "src_host": "FIN-LT22", "dst_host": "FIN-SRV01",
+    "detail": "unexpected interactive RDP logon using harvested finance service account credentials",
+    "protocol": "RDP", "dst_port": 3389 },
+
+  { "_id": "REC-0208", "source": "network_sensor", "format": "json",
+    "timestamp": "2026-09-16T14:22:00Z",
+    "src_ip": "10.10.9.88", "dst_ip": "10.10.9.10",
+    "dst_port": 3389, "protocol": "RDP", "host": "FIN-LT22" },
+
+  { "_id": "REC-0209", "source": "endpoint", "format": "json",
+    "timestamp": "2026-09-16T14:35:00Z",
+    "host": "FIN-SRV01", "process": "vssadmin.exe",
+    "parent_process": "powershell.exe",
+    "detail": "shadow copy deletion attempt — ransomware pre-encryption stage" },
+
+
+  { "_id": "REC-0301", "source": "threat_intel_report", "format": "text",
+    "timestamp": "2026-09-16T19:00:00Z",
+    "text": "Campaign report: 194.165.16.77 linked to supply-chain compromise targeting HR and recruiting systems via poisoned document templates.",
+    "attack_id_hint": "T1566.001" },
+
+  { "_id": "REC-0302", "source": "siem", "format": "json",
+    "timestamp": "2026-09-16T19:02:00Z",
+    "event_type": "email_attachment_opened",
+    "user": "rverma", "host": "HR-WKS03",
+    "detail": "winword.exe opened attachment onboarding_template_v3.docm" },
+
+  { "_id": "REC-0303", "source": "endpoint", "format": "json",
+    "timestamp": "2026-09-16T19:03:00Z",
+    "host": "HR-WKS03", "process": "powershell.exe",
+    "parent_process": "winword.exe",
+    "cmdline": "-enc TgBlAHQALgBXAGUAYgBDAGwAaQBlAG4AdAA..." },
+
+  { "_id": "REC-0304", "source": "threat_intel_report", "format": "text",
+    "timestamp": "2026-09-16T19:05:00Z",
+    "text": "IOC match: 194.165.16.77 flagged in two independent threat feeds, category: C2 beaconing, high confidence.",
+    "attack_id_hint": null },
+
+  { "_id": "REC-0305", "source": "network_sensor", "format": "json",
+    "timestamp": "2026-09-16T19:06:00Z",
+    "src_ip": "10.10.12.44", "dst_ip": "194.165.16.77",
+    "dst_port": 443, "protocol": "HTTPS", "host": "HR-WKS03" },
+
+  { "_id": "REC-0306", "source": "network_sensor", "format": "json",
+    "timestamp": "2026-09-16T19:28:00Z",
+    "src_ip": "10.10.12.44", "dst_ip": "194.165.16.77",
+    "dst_port": 22, "protocol": "TCP", "source": "network_sensor",
+    "host": "HR-WKS03" },
+
+  { "_id": "REC-0307", "source": "siem", "format": "json",
+    "timestamp": "2026-09-16T19:29:00Z",
+    "event_type": "large_data_transfer",
+    "user": "rverma", "host": "HR-WKS03",
+    "detail": "unusual outbound data volume over SSH to external IP 194.165.16.77 — potential exfiltration" }
 ]

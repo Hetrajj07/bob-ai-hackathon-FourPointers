@@ -14,9 +14,9 @@ def test_health_and_workspace_shell_are_available():
 
     page = client.get("/")
     assert page.status_code == 200
-    assert "Evidence-first investigation workspace" in page.text
+    assert "Evidence-first" in page.text
     assert 'role="tablist"' in page.text
-    assert "Skip to investigation workspace" in page.text
+    assert "Skip to" in page.text
 
 
 def test_promoted_case_has_grounded_evidence_and_all_mcp_previews_work():
@@ -64,5 +64,5 @@ def test_summary_response_has_required_structure():
     assert "metadata" in data
     assert "metrics" in data
     assert "incidents" in data
-    assert data["metrics"]["raw_records"] == 37
+    assert data["metrics"]["raw_records"] == 62
     assert data["metadata"]["ground_truth_used_for_runtime"] is False

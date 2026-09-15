@@ -21,15 +21,15 @@ A naïve implementation treats a shared host/IP/time window as an incident. Thre
 ## Example
 
 ```text
-37 observations
+62 observations (4 source types, 3 attack scenarios)
    ↓
-2 candidate hypotheses
+5 candidate hypotheses
    ↓
 ATT&CK + attack-flow validation
    ↓
-1 promoted incident
+4 promoted incidents  (3× P1, 1× P2)
    ↓
-P1 decision brief
+Priority-ranked decision briefs
 ```
 
 These numbers describe the bundled synthetic demo only.
