@@ -2,7 +2,13 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 ROOT = Path(__file__).resolve().parents[1]
-from threatfusion.engine import analyze, normalize, tag_technique, promoted_incidents, bluf, remediation_runbook, temporal_decay, negative_evidence, extract_entities, actor_assessment
+from threatfusion.engine import (
+    analyze, normalize, tag_technique, promoted_incidents, bluf,
+    remediation_runbook, temporal_decay, negative_evidence, extract_entities,
+    actor_assessment, actor_similarity, attack_flow, edge_strength,
+    text_of, _as_string_list, asset_criticality, clear_context_cache,
+    candidate_clusters, score_cluster, _canonical_entity_value,
+)
 
 
 def test_runtime_does_not_promote_from_ground_truth():
@@ -111,3 +117,101 @@ def test_negative_evidence_penalties():
     factors = [n["factor"] for n in negs]
     assert "clean antivirus result" in factors
     assert "approved administrative context" in factors
+
+
+def test_text_of_excludes_structural_keys():
+    """A record ID containing a technique keyword must not trigger a false match."""
+    raw = {
+        "_id": "lsass_benign_test",
+        "timestamp": "2026-09-15T00:00:00Z",
+        "source": "endpoint",
+        "format": "json",
+        "event_type": "normal_process_start",
+        "process": "notepad.exe",
+    }
+    t = text_of(raw)
+    # _id is excluded, so "lsass" should NOT appear in the text
+    assert "lsass" not in t
+    # But semantic fields are preserved
+    assert "notepad" in t
+    techniques = {"T1003.001": {"name": "LSASS Memory", "tactics": ["credential-access"]}}
+    tid, _, _ = tag_technique(raw, techniques)
+    assert tid is None, "Record ID 'lsass_benign_test' should not trigger T1003.001"
+
+
+def test_identical_timestamps_edge_strength():
+    """Two events at exactly the same time with a shared entity should get full decay."""
+    a = normalize({"_id": "A", "timestamp": "2026-09-15T08:00:00Z", "source": "siem", "host": "SRV01"})
+    b = normalize({"_id": "B", "timestamp": "2026-09-15T08:00:00Z", "source": "endpoint", "host": "SRV01"})
+    strength, reasons = edge_strength(a, b)
+    assert strength > 0.0
+    assert "shared:host" in reasons
+
+
+def test_plural_iocs_field():
+    """The engine handles the plural 'iocs' field alongside singular 'ioc'."""
+    raw = {
+        "_id": "MULTI",
+        "timestamp": "2026-09-15T00:00:00Z",
+        "source": "threat_intel_report",
+        "text": "Campaign alert",
+        "iocs": ["10.20.30.40", "evil.example.com"],
+    }
+    entities = extract_entities(raw)
+    assert ("ioc", "10.20.30.40") in entities
+    assert ("ioc", "evil.example.com") in entities
+
+
+def test_attack_flow_single_event():
+    """A single technique event returns score 0 with sane defaults."""
+    events = [{"technique": "T1566.001", "tactic": "initial-access", "tactic_rank": 2, "timestamp": "2026-09-15T08:00:00Z"}]
+    flow = attack_flow(events)
+    assert flow["score"] == 0.0
+    assert flow["depth"] == 0.25
+    assert flow["transitions"] == []
+
+
+def test_attack_flow_empty_events():
+    """Zero technique events returns score 0 with depth 0."""
+    flow = attack_flow([])
+    assert flow["score"] == 0.0
+    assert flow["depth"] == 0.0
+    assert flow["transitions"] == []
+
+
+def test_actor_similarity_empty_observed():
+    """No observed techniques returns an empty match list."""
+    result = actor_similarity([], [{"group": "APT-X", "technique_id": "T1566.001"}])
+    assert result == []
+
+
+def test_asset_criticality_lowercase_host_in_raw():
+    """A lowercase host in raw data should still match the uppercased asset registry."""
+    cluster = [{
+        "hosts": [],
+        "raw": {"src_host": "eng-db01", "dst_host": None},
+    }]
+    assets = {"ENG-DB01": {"criticality": 95, "mission_role": "Engineering database", "zone": "mission-critical"}}
+    score, hits = asset_criticality(cluster, assets)
+    assert score == 95
+    assert len(hits) == 1
+    assert hits[0]["asset"] == "ENG-DB01"
+
+
+def test_normalize_rejects_falsy_id():
+    """Records with _id=0, _id='', or missing _id should be rejected."""
+    for bad_id in [0, "", None]:
+        try:
+            normalize({"_id": bad_id, "timestamp": "2026-09-15T00:00:00Z"})
+        except ValueError as exc:
+            assert "missing" in str(exc).lower()
+        else:
+            raise AssertionError(f"_id={bad_id!r} should have been rejected")
+
+
+def test_clear_context_cache():
+    """Clearing the cache does not raise and allows re-analysis."""
+    clear_context_cache()
+    d = analyze(ROOT.parent)
+    assert d["metadata"]["engine_version"]
+    clear_context_cache()  # should not raise

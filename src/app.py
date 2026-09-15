@@ -6,15 +6,25 @@ hand the grounded facts to IBM Bob when narrative assistance is useful.
 """
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
-from src.threatfusion.engine import ENGINE_VERSION, analyze, bluf, promoted_incidents, remediation_runbook
+from src.threatfusion.engine import ENGINE_VERSION, analyze, bluf, clear_context_cache, promoted_incidents, remediation_runbook
 
+logger = logging.getLogger("threatfusion")
 ROOT = Path(__file__).resolve().parents[1]
 app = FastAPI(title="ThreatFusion - Analyst Workspace", version=ENGINE_VERSION)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET"],
+    allow_headers=["*"],
+)
 
 INDEX = r'''<!doctype html>
 <html lang="en">
@@ -238,7 +248,11 @@ def healthz() -> dict:
 
 @app.get("/api/summary")
 def summary() -> dict:
-    analysis = analyze(ROOT)
+    try:
+        analysis = analyze(ROOT)
+    except Exception as exc:
+        logger.exception("Analysis failed")
+        raise HTTPException(status_code=500, detail=f"Analysis error: {exc}") from exc
     promoted = [_with_presentation_fields(incident) for incident in promoted_incidents(analysis)]
     raw_count = len(analysis["records"])
     candidate_count = len(analysis["incidents"])
@@ -256,7 +270,11 @@ def summary() -> dict:
 
 @app.get("/api/incidents/{incident_id}")
 def incident(incident_id: str) -> dict:
-    analysis = analyze(ROOT)
+    try:
+        analysis = analyze(ROOT)
+    except Exception as exc:
+        logger.exception("Analysis failed")
+        raise HTTPException(status_code=500, detail=f"Analysis error: {exc}") from exc
     for candidate in promoted_incidents(analysis):
         if candidate["id"] == incident_id:
             return _with_presentation_fields(candidate)

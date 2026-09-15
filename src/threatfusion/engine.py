@@ -17,7 +17,6 @@ import math
 import re
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +62,35 @@ TECHNIQUE_RISK = {
     "T1021.004": 74,  # SSH
 }
 
+__all__ = [
+    "ASSET_DEFAULTS",
+    "ENGINE_VERSION",
+    "ENTITY_WEIGHTS",
+    "SOURCE_CREDIBILITY",
+    "TACTIC_ORDER",
+    "TACTIC_RANK",
+    "TECHNIQUE_RISK",
+    "actor_assessment",
+    "actor_similarity",
+    "analyze",
+    "asset_criticality",
+    "attack_flow",
+    "bluf",
+    "candidate_clusters",
+    "clear_context_cache",
+    "edge_strength",
+    "extract_entities",
+    "load_context",
+    "negative_evidence",
+    "normalize",
+    "parse_ts",
+    "promoted_incidents",
+    "remediation_runbook",
+    "score_cluster",
+    "tag_technique",
+    "temporal_decay",
+]
+
 IOC_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
 
 
@@ -91,8 +119,12 @@ def load_json(path: Path) -> Any:
         return json.load(f)
 
 
-@lru_cache(maxsize=4)
+_context_cache: dict[str, tuple] = {}
+
+
 def load_context(root_str: str):
+    if root_str in _context_cache:
+        return _context_cache[root_str]
     root = Path(root_str)
     data = root / "src" / "data"
     ref = root / "src" / "reference"
@@ -102,11 +134,24 @@ def load_context(root_str: str):
     techniques = {x["id"]: x for x in load_json(ref / "techniques.json")}
     groups = load_json(ref / "groups.json")
     edges = load_json(ref / "group_technique_edges.json")
-    return records, techniques, groups, edges, assets
+    result = (records, techniques, groups, edges, assets)
+    _context_cache[root_str] = result
+    return result
+
+
+def clear_context_cache() -> None:
+    """Allow tests and the dashboard reload to pick up data changes."""
+    _context_cache.clear()
+
+
+# Structural keys excluded from technique-matching to prevent false positives
+# (e.g. a record ID containing "lsass" should not trigger T1003.001).
+_TEXT_EXCLUDE_KEYS = frozenset({"_id", "format", "source", "timestamp", "attack_id_hint"})
 
 
 def text_of(r: dict[str, Any]) -> str:
-    return json.dumps(r, sort_keys=True, ensure_ascii=False).lower()
+    filtered = {k: v for k, v in r.items() if k not in _TEXT_EXCLUDE_KEYS}
+    return json.dumps(filtered, sort_keys=True, ensure_ascii=False).lower()
 
 
 def _canonical_entity_value(entity_type: str, value: Any) -> str:
@@ -394,8 +439,15 @@ def asset_criticality(cluster: list[dict[str, Any]], assets: dict[str, Any]) -> 
     hits = []
     seen_assets: set[str] = set()
     for r in cluster:
+        # Include both canonicalized hosts and raw host fields.
         candidates = list(r["hosts"])
-        candidates += [r["raw"].get("src_host"), r["raw"].get("dst_host")]
+        # Canonicalize raw fields so lowercase host names still match the asset registry.
+        raw_src = r["raw"].get("src_host")
+        raw_dst = r["raw"].get("dst_host")
+        if raw_src:
+            candidates.append(_canonical_entity_value("host", raw_src))
+        if raw_dst:
+            candidates.append(_canonical_entity_value("host", raw_dst))
         for host in candidates:
             if host and host in assets and host not in seen_assets:
                 meta = assets[host]
@@ -656,6 +708,8 @@ def bluf(inc: dict[str, Any]) -> dict[str, Any]:
     if not actions:
         actions.append("Collect additional endpoint and identity telemetry before escalation.")
     gaps = inc["attack_flow"].get("unobserved_intermediate_tactics", [])
+    # Reuse the existing runbook rather than recomputing it.
+    runbook = inc.get("runbook") or remediation_runbook(inc)
     return {
         "bottom_line": f"{inc['priority']} incident with {inc['confidence']}% evidence confidence, {inc['severity']}/100 threat severity and {inc['mission_impact']}/100 mission impact.",
         "assessment": f"Observed activity forms a {'coherent' if inc['attack_flow']['score'] >= 0.55 else 'weak'} multi-stage behavior pattern. ATT&CK evidence: {techniques}.",
@@ -666,5 +720,5 @@ def bluf(inc: dict[str, Any]) -> dict[str, Any]:
             "No material contradicting evidence was identified in the available demo telemetry."
         ),
         "recommended_actions": actions[:4],
-        "runbook": remediation_runbook(inc),
+        "runbook": runbook,
     }

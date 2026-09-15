@@ -42,3 +42,27 @@ def test_unknown_incident_returns_a_clear_not_found_response():
     response = client.get("/api/incidents/INC-DOES-NOT-EXIST")
     assert response.status_code == 404
     assert response.json()["detail"] == "Incident not found"
+
+
+def test_cors_headers_are_present():
+    response = client.options("/api/summary", headers={"Origin": "http://localhost:3000", "Access-Control-Request-Method": "GET"})
+    assert response.status_code == 200
+
+
+def test_mcp_search_empty_query():
+    response = client.get("/api/mcp-query", params={"tool": "search_indicators", "query": ""})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total_matches"] == 0
+    assert payload["matches"] == []
+
+
+def test_summary_response_has_required_structure():
+    summary = client.get("/api/summary")
+    assert summary.status_code == 200
+    data = summary.json()
+    assert "metadata" in data
+    assert "metrics" in data
+    assert "incidents" in data
+    assert data["metrics"]["raw_records"] == 37
+    assert data["metadata"]["ground_truth_used_for_runtime"] is False

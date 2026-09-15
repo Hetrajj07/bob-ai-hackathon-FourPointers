@@ -6,7 +6,10 @@ import math
 from collections import defaultdict
 from pathlib import Path
 
-from threatfusion.engine import analyze, normalize, parse_ts, promoted_incidents
+try:
+    from src.threatfusion.engine import analyze, normalize, parse_ts, promoted_incidents
+except ImportError:
+    from threatfusion.engine import analyze, normalize, parse_ts, promoted_incidents
 
 ROOT = Path(__file__).resolve().parents[1]
 
