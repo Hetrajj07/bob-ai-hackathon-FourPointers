@@ -1,0 +1,28 @@
+[
+  {
+    "event_id": "USGS-EQ-20260919-01",
+    "event_type": "earthquake",
+    "magnitude": 5.4,
+    "depth_km": 14.2,
+    "latitude": 34.3100,
+    "longitude": 78.9500,
+    "timestamp": "2026-09-19T01:30:00Z",
+    "place": "18 km ENE of Chushul, Ladakh, India",
+    "alert_level": "green",
+    "detail": "USGS Real-time Seismic feed: M5.4 seismic disturbance in high-altitude border zone, potentially causing rockslides along strategic access highways.",
+    "sector": "NORTHERN_LAC_LADAKH"
+  },
+  {
+    "event_id": "CEMS-EMSR-742",
+    "event_type": "flash_flood_emergency_mapping",
+    "magnitude": 0.0,
+    "depth_km": 0.0,
+    "latitude": 26.7000,
+    "longitude": 88.4000,
+    "timestamp": "2026-09-19T03:00:00Z",
+    "place": "Teesta River Basin / Siliguri Corridor",
+    "alert_level": "orange",
+    "detail": "Copernicus Emergency Management Service rapid mapping activation EMSR-742: monsoon surge river flooding impacting rail/road bridges in Siliguri corridor.",
+    "sector": "SILIGURI_CORRIDOR"
+  }
+]

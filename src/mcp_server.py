@@ -176,6 +176,46 @@ TOOLS = [
             "additionalProperties": False,
         },
     },
+    {
+        "name": "get_domain_summary",
+        "description": (
+            "Retrieve multi-domain situational awareness telemetry breakdown across: "
+            "1. Airspace (OpenSky flights & tracks), 2. Maritime (AIS vessels & dark vessels), "
+            "3. Satellite EO (Copernicus Sentinel-1/2 SAR & Optical), 4. Thermal IR (NASA FIRMS hotspots), "
+            "5. Weather/Environment (IMD observations & alerts), 6. Geospatial Infrastructure (ISRO Bhuvan), "
+            "7. Geophysical (Copernicus EMS / USGS), 8. Cyber / C2 (SPARTA & OTRF). "
+            "Provides counts, active sectors, and real-world provenance for Bob."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "domain": {
+                    "type": "string",
+                    "description": "Optional specific domain filter ('airspace', 'maritime', 'satellite_eo', 'thermal_ir', 'weather_env', 'geospatial_infra', 'geophysical', 'cyber_c2').",
+                },
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_geospatial_threats",
+        "description": (
+            "Query threats, tracks, and observations correlated within a specific strategic defence / border sector: "
+            "'NORTHERN_LAC_LADAKH', 'WESTERN_BORDER_SIR_CREEK', 'SILIGURI_CORRIDOR', 'ANDAMAN_NICOBAR_EEZ', or 'CENTRAL_COMMAND_CORRIDOR'. "
+            "Combines airspace tracks, maritime vessels, thermal anomalies, satellite SAR change scenes, and weather state."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "sector": {
+                    "type": "string",
+                    "description": "Sector identifier (e.g. 'NORTHERN_LAC_LADAKH', 'WESTERN_BORDER_SIR_CREEK', 'SILIGURI_CORRIDOR', 'ANDAMAN_NICOBAR_EEZ').",
+                },
+            },
+            "required": ["sector"],
+            "additionalProperties": False,
+        },
+    },
 ]
 
 
@@ -332,6 +372,103 @@ def execute_tool(name: str, args: dict[str, Any]) -> dict[str, Any]:
             "total_matches": len(matches),
             "matches": matches[:15],
             "note": f"Showing {min(15, len(matches))} of {len(matches)} matching observations across raw telemetry.",
+        }
+
+    # ── 3. get_domain_summary ──
+    if name == "get_domain_summary":
+        domain_filter = args.get("domain")
+        from src.threatfusion.spatial import STRATEGIC_SECTORS
+
+        records = analysis.get("records", [])
+        domain_counts: dict[str, int] = {}
+        sector_counts: dict[str, int] = {}
+        domain_observations: dict[str, list[dict[str, Any]]] = {}
+
+        for r in records:
+            dom = r.get("domain") or ("cyber_c2" if r.get("source") in ("endpoint", "network_sensor", "siem", "threat_intel_report") else r.get("source", "other"))
+            sec = r.get("sector") or "CENTRAL_COMMAND_CORRIDOR"
+            domain_counts[dom] = domain_counts.get(dom, 0) + 1
+            sector_counts[sec] = sector_counts.get(sec, 0) + 1
+
+            if dom not in domain_observations:
+                domain_observations[dom] = []
+            if len(domain_observations[dom]) < 5:
+                domain_observations[dom].append({
+                    "record_id": str(r.get("_id") or r.get("id")),
+                    "source": r.get("source"),
+                    "domain": dom,
+                    "event_type": r.get("event_type"),
+                    "host": r.get("host"),
+                    "latitude": r.get("latitude"),
+                    "longitude": r.get("longitude"),
+                    "sector": sec,
+                    "summary": r.get("detail") or r.get("text") or "Multi-domain telemetry",
+                    "dataset_name": r.get("dataset_name", "Public Data Source"),
+                })
+
+        return {
+            "status": "ok",
+            "total_records": len(records),
+            "domain_counts": domain_counts,
+            "sector_counts": sector_counts,
+            "active_strategic_sectors": list(STRATEGIC_SECTORS.keys()),
+            "domain_sample_observations": domain_observations if not domain_filter else {domain_filter: domain_observations.get(domain_filter, [])},
+            "source_provenance_catalog": [
+                {"domain": "airspace", "source": "OpenSky Network", "type": "Real civil ADS-B aircraft positions & squawks"},
+                {"domain": "maritime", "source": "NOAA MarineCadastre AIS", "type": "Vessel traffic & dark vessel gaps"},
+                {"domain": "satellite_eo", "source": "Copernicus Sentinel-1/2 & ISRO MOSDAC", "type": "SAR all-weather radar & multispectral optical"},
+                {"domain": "thermal_ir", "source": "NASA FIRMS (MODIS/VIIRS)", "type": "Near-real-time active fire & thermal hotspots"},
+                {"domain": "weather_env", "source": "India Meteorological Dept (IMD)", "type": "AWS radar observations, dense fog & sea-state bulletins"},
+                {"domain": "geospatial_infra", "source": "ISRO Bhuvan / India OGD", "type": "Strategic forward airfields, naval bases, radar stations"},
+                {"domain": "geophysical", "source": "USGS & Copernicus EMS", "type": "Real-time seismic feeds & rapid mapping activations"},
+                {"domain": "cyber_c2", "source": "SPARTA / OTRF / CIC-IDS", "type": "Space TTPs, Sysmon, and network flow alerts"},
+            ],
+        }
+
+    # ── 4. get_geospatial_threats ──
+    if name == "get_geospatial_threats":
+        target_sector = str(args.get("sector", "")).strip().upper()
+        from src.threatfusion.spatial import get_sector_metadata, STRATEGIC_SECTORS
+
+        if target_sector not in STRATEGIC_SECTORS:
+            return {
+                "error": f"Unknown sector '{target_sector}'.",
+                "valid_sectors": list(STRATEGIC_SECTORS.keys()),
+            }
+
+        meta = get_sector_metadata(target_sector)
+        matching_records = []
+        for r in analysis.get("records", []):
+            if r.get("sector") == target_sector or str(r.get("host", "")).find(target_sector) != -1:
+                matching_records.append({
+                    "record_id": str(r.get("_id") or r.get("id")),
+                    "timestamp": r.get("timestamp"),
+                    "source": r.get("source"),
+                    "domain": r.get("domain", "multi_domain"),
+                    "host": r.get("host"),
+                    "latitude": r.get("latitude"),
+                    "longitude": r.get("longitude"),
+                    "summary": r.get("detail") or r.get("text") or "Sector observation",
+                    "provenance": r.get("dataset_name", "Multi-domain feed"),
+                })
+
+        # Sector candidates
+        sector_candidates = [
+            _format_candidate_summary(c)
+            for c in all_candidates
+            if any(r.get("record_id") in c.get("record_ids", []) for r in matching_records)
+        ]
+
+        return {
+            "sector": target_sector,
+            "sector_name": meta.get("name"),
+            "strategic_importance": meta.get("strategic_importance"),
+            "primary_sensors": meta.get("primary_sensors"),
+            "domain_focus": meta.get("domain_focus"),
+            "coordinates_center": meta.get("center"),
+            "matching_observations_count": len(matching_records),
+            "observations": matching_records[:20],
+            "correlated_candidate_clusters": sector_candidates,
         }
 
     # All subsequent tools require incident_id

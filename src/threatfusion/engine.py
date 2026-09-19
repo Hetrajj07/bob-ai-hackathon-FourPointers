@@ -38,6 +38,15 @@ SOURCE_CREDIBILITY = {
     "satcom_sensor": 0.88,
     "network_sensor": 0.84,
     "siem": 0.78,
+    "opensky_airspace": 0.89,
+    "maritime_ais": 0.88,
+    "copernicus_sentinel": 0.91,
+    "nasa_firms": 0.90,
+    "imd_weather": 0.87,
+    "isro_bhuvan": 0.92,
+    "isro_mosdac": 0.90,
+    "copernicus_ems": 0.88,
+    "usgs_earthquake": 0.93,
 }
 
 # Relationship weights are deliberately interpretable.
@@ -46,6 +55,10 @@ ENTITY_WEIGHTS = {
     "ip": 0.82,
     "host": 0.65,
     "user": 0.58,
+    "aircraft": 0.85,
+    "vessel": 0.85,
+    "sector": 0.75,
+    "satellite": 0.72,
 }
 
 # Demonstration asset registry. In a real deployment this would come from CMDB/asset inventory.
@@ -57,6 +70,10 @@ ASSET_DEFAULTS = {
     "SAT-GROUND-01": {"criticality": 96, "mission_role": "Satellite ground control station", "zone": "mission-critical"},
     "SATCOM-GW02": {"criticality": 92, "mission_role": "Tactical satellite communication gateway", "zone": "perimeter"},
     "DEF-CMD-HQ01": {"criticality": 98, "mission_role": "Defence command headquarters hub", "zone": "mission-critical"},
+    "BHUVAN-INFRA-BHUVAN-STRAT-01": {"criticality": 96, "mission_role": "Nyoma Forward Airfield & High-Altitude Radar Complex", "zone": "forward-border"},
+    "BHUVAN-INFRA-BHUVAN-STRAT-02": {"criticality": 92, "mission_role": "Sir Creek Coastal Radar Station", "zone": "maritime-perimeter"},
+    "BHUVAN-INFRA-BHUVAN-STRAT-03": {"criticality": 94, "mission_role": "INS Kohassa Naval Air Facility", "zone": "strategic-island-command"},
+    "BHUVAN-INFRA-BHUVAN-STRAT-04": {"criticality": 95, "mission_role": "Siliguri Corridor Strategic Chokepoint", "zone": "chokepoint"},
 }
 
 TECHNIQUE_RISK = {
@@ -243,6 +260,18 @@ def extract_entities(r: dict[str, Any]) -> list[tuple[str, str]]:
         tf_ioc = r["threatfox_match"].get("ioc")
         if tf_ioc:
             ents.append(("ioc", _canonical_entity_value("ioc", tf_ioc)))
+
+    # Multi-domain situational entities
+    for k in ("callsign", "icao24"):
+        if r.get(k):
+            ents.append(("aircraft", _canonical_entity_value("aircraft", r[k])))
+    for k in ("mmsi", "vessel_name"):
+        if r.get(k):
+            ents.append(("vessel", _canonical_entity_value("vessel", r[k])))
+    if r.get("sector"):
+        ents.append(("sector", _canonical_entity_value("sector", r["sector"])))
+    if r.get("satellite_mission"):
+        ents.append(("satellite", _canonical_entity_value("satellite", r["satellite_mission"])))
 
     return list(dict.fromkeys(ents))
 

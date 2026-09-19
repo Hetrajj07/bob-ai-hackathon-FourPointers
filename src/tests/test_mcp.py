@@ -45,6 +45,8 @@ def test_mcp_tool_definitions():
         "generate_bluf",
         "get_remediation_runbook",
         "search_indicators",
+        "get_domain_summary",
+        "get_geospatial_threats",
     }
     tool_map = {t["name"]: t for t in TOOLS}
     assert set(tool_map.keys()) == expected_tools
@@ -231,7 +233,7 @@ def test_mcp_jsonrpc_stdio_lifecycle(monkeypatch):
     # Validate tools/list response
     list_res = json.loads(output_lines[2])
     assert list_res["id"] == 3
-    assert len(list_res["result"]["tools"]) == 7
+    assert len(list_res["result"]["tools"]) == 9
 
     # Validate tools/call response
     call_res = json.loads(output_lines[3])

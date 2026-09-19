@@ -1,0 +1,42 @@
+[
+  {
+    "feature_id": "BHUVAN-STRAT-01",
+    "feature_name": "Nyoma Forward Airfield & High-Altitude Radar Complex",
+    "feature_type": "strategic_airfield",
+    "latitude": 33.1900,
+    "longitude": 78.6900,
+    "strategic_tier": "Tier-1 Defence Strategic Hub",
+    "sector": "NORTHERN_LAC_LADAKH",
+    "description": "Critical forward high-altitude airfield and air-defence radar installation safeguarding eastern Ladakh approaches."
+  },
+  {
+    "feature_id": "BHUVAN-STRAT-02",
+    "feature_name": "Sir Creek Maritime Patrol Base & Coastal Radar Station",
+    "feature_type": "coastal_radar_station",
+    "latitude": 23.6500,
+    "longitude": 68.6800,
+    "strategic_tier": "Tier-1 Border & EEZ Surveillance Post",
+    "sector": "WESTERN_BORDER_SIR_CREEK",
+    "description": "Integrated coastal radar station and maritime border outpost monitoring Indus delta and Sir Creek waters."
+  },
+  {
+    "feature_id": "BHUVAN-STRAT-03",
+    "feature_name": "INS Kohassa / Shibpur Naval Air Station",
+    "feature_type": "naval_airbase",
+    "latitude": 13.3400,
+    "longitude": 93.0000,
+    "strategic_tier": "Tier-1 Tri-Services Command Forward Post",
+    "sector": "ANDAMAN_NICOBAR_EEZ",
+    "description": "Forward tri-services naval air facility overlooking northern Andaman Sea and international shipping straits."
+  },
+  {
+    "feature_id": "BHUVAN-STRAT-04",
+    "feature_name": "Siliguri Corridor Strategic Transport Chokepoint",
+    "feature_type": "critical_transport_corridor",
+    "latitude": 26.7100,
+    "longitude": 88.4200,
+    "strategic_tier": "Tier-1 National Strategic Land Bridge",
+    "sector": "SILIGURI_CORRIDOR",
+    "description": "Narrow geographical corridor connecting mainland India to North-Eastern states."
+  }
+]

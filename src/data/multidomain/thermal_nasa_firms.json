@@ -1,0 +1,38 @@
+[
+  {
+    "latitude": 34.2815,
+    "longitude": 78.9805,
+    "brightness": 348.6,
+    "scan": 1.1,
+    "track": 1.0,
+    "acq_date": "2026-09-19",
+    "acq_time": "0315",
+    "satellite": "VIIRS (Suomi-NPP / NOAA-20)",
+    "instrument": "VIIRS",
+    "confidence": "high",
+    "version": "2.0NRT",
+    "bright_t31": 298.4,
+    "frp": 18.4,
+    "daynight": "N",
+    "detail": "NASA FIRMS high-confidence thermal anomaly (FRP: 18.4 MW) detected during night pass directly adjacent to newly observed forward infrastructure in Ladakh sector.",
+    "sector": "NORTHERN_LAC_LADAKH"
+  },
+  {
+    "latitude": 23.6820,
+    "longitude": 68.6480,
+    "brightness": 332.1,
+    "scan": 1.3,
+    "track": 1.1,
+    "acq_date": "2026-09-19",
+    "acq_time": "0400",
+    "satellite": "MODIS (Terra)",
+    "instrument": "MODIS",
+    "confidence": 85,
+    "version": "6.1NRT",
+    "bright_t31": 292.0,
+    "frp": 12.1,
+    "daynight": "D",
+    "detail": "NASA FIRMS thermal hotspot identified along marshland border corridor (Sir Creek sector), correlated with unannounced low-altitude aerial track PATROL-44.",
+    "sector": "WESTERN_BORDER_SIR_CREEK"
+  }
+]
