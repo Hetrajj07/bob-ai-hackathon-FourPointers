@@ -758,6 +758,9 @@ INDEX = r'''<!doctype html>
                   <button id="sim-otrf-btn" class="action-btn">💻 OTRF Sysmon Events (Real Sample)</button>
                   <button id="sim-cicids-btn" class="action-btn">🌐 CIC-IDS2017 Flows (Real Sample)</button>
                   <button id="sim-benign-btn" class="action-btn">🛡️ Ingest Benign Routine Noise</button>
+                  <button id="sim-hist-btn" class="action-btn primary">📜 Ingest Historical Archive (August 2026)</button>
+                  <button id="sim-recent-btn" class="action-btn primary">⚡ Ingest Recent Threats (Sept 18-19, 2026)</button>
+                  <button id="sim-all-btn" class="action-btn primary" style="background:linear-gradient(135deg,var(--purple),var(--cyan));color:#fff;border:none;">🚀 Ingest Full Corpus (140+ Alerts)</button>
                 </div>
                 <div style="margin-top:10px;margin-bottom:16px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
                   <p class="eyebrow" style="margin-bottom:4px;">CTI Verification (Curated Offline Snapshot)</p>
@@ -1334,6 +1337,54 @@ INDEX = r'''<!doctype html>
       }
     });
 
+    document.getElementById('sim-hist-btn').addEventListener('click', async () => {
+      setStatus('Ingesting historical threat archive (August 2026 campaigns)…');
+      try {
+        const res = await fetch('/api/ingest/corpus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'historical' }),
+        });
+        const data = await res.json();
+        setStatus(`Historical archive ingested: ${data.stats.historical_ingested} records. Total alerts in DB: ${data.total_alerts}.`);
+        await boot();
+      } catch (err) {
+        setStatus('Historical ingest error: ' + err.message, true);
+      }
+    });
+
+    document.getElementById('sim-recent-btn').addEventListener('click', async () => {
+      setStatus('Ingesting recent threats (September 18-19, 2026 active telemetry)…');
+      try {
+        const res = await fetch('/api/ingest/corpus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'recent' }),
+        });
+        const data = await res.json();
+        setStatus(`Recent threats ingested: ${data.stats.recent_ingested} records. Total alerts in DB: ${data.total_alerts}.`);
+        await boot();
+      } catch (err) {
+        setStatus('Recent ingest error: ' + err.message, true);
+      }
+    });
+
+    document.getElementById('sim-all-btn').addEventListener('click', async () => {
+      setStatus('Ingesting full threat corpus (historical archive + recent telemetry + OTRF + CIC-IDS + SPARTA)…');
+      try {
+        const res = await fetch('/api/ingest/corpus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode: 'all' }),
+        });
+        const data = await res.json();
+        setStatus(`Full corpus ingested: +${data.stats.total_new_ingested} records. Database now has ${data.total_alerts} observations!`);
+        await boot();
+      } catch (err) {
+        setStatus('Full corpus ingest error: ' + err.message, true);
+      }
+    });
+
     document.getElementById('btn-cti-lookup').addEventListener('click', async () => {
       const q = document.getElementById('cti-indicator-input').value.trim();
       const resEl = document.getElementById('cti-lookup-result');
@@ -1809,6 +1860,34 @@ def simulate_feed(payload: dict) -> dict:
                 "detail": "Interactive PowerShell session launched by known admin without suspicious parameters.",
             },
         ]
+    elif scenario in ("historical_threats", "historical_ghoststeal_campaign"):
+        hist_file = ROOT / "src" / "data" / "historical" / "historical_threats.json"
+        if hist_file.exists():
+            with hist_file.open(encoding="utf-8") as f:
+                sim_records = [enrich_record(r, root=ROOT) for r in json.load(f)]
+        else:
+            sim_records = []
+    elif scenario in ("recent_threats", "recent_ransomware_predeployment"):
+        rec_file = ROOT / "src" / "data" / "recent" / "recent_threats.json"
+        if rec_file.exists():
+            with rec_file.open(encoding="utf-8") as f:
+                sim_records = [enrich_record(r, root=ROOT) for r in json.load(f)]
+        else:
+            sim_records = []
+    elif scenario in ("all_threats", "full_threat_corpus"):
+        from src.threatfusion.db import ingest_corpus_data
+        stats = ingest_corpus_data(include_historical=True, include_recent=True, root_dir=ROOT)
+        clear_context_cache()
+        analysis = get_dynamic_analysis()
+        promoted = promoted_incidents(analysis)
+        return {
+            "status": "ok",
+            "scenario": scenario,
+            "inserted_records": stats["total_new_ingested"],
+            "total_alerts": len(analysis["records"]),
+            "promoted_incidents": len(promoted),
+            "stats": stats,
+        }
     else:
         raise HTTPException(status_code=400, detail=f"Unknown scenario preset: {scenario}")
 
@@ -1823,6 +1902,35 @@ def simulate_feed(payload: dict) -> dict:
         "total_alerts": len(analysis["records"]),
         "promoted_incidents": len(promoted),
     }
+
+
+@app.post("/api/ingest/corpus")
+def ingest_corpus(payload: dict | None = None) -> dict:
+    """Ingest historical archive and/or recent multi-source threats into SQLite database."""
+    mode = (payload or {}).get("mode", "all")
+    from src.threatfusion.db import ingest_corpus_data
+    include_hist = mode in ("all", "historical")
+    include_rec = mode in ("all", "recent")
+    stats = ingest_corpus_data(
+        include_historical=include_hist,
+        include_recent=include_rec,
+        include_otrf=True,
+        include_cicids=True,
+        include_sparta_satellite=True,
+        root_dir=ROOT,
+    )
+    clear_context_cache()
+    analysis = get_dynamic_analysis()
+    promoted = promoted_incidents(analysis)
+    return {
+        "status": "ok",
+        "mode": mode,
+        "stats": stats,
+        "total_alerts": len(analysis["records"]),
+        "candidate_clusters": len(analysis["incidents"]),
+        "promoted_incidents": len(promoted),
+    }
+
 
 
 @app.get("/api/evaluation")

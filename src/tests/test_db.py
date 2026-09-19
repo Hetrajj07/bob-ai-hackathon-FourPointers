@@ -117,3 +117,27 @@ def test_db_crud_operations(tmp_path):
     # Reset DB
     reset_db(root_dir=ROOT, db_path=test_db)
     assert len(get_all_alerts(db_path=test_db)) == 62
+
+
+def test_ingest_corpus_data(tmp_path):
+    from src.threatfusion.db import ingest_corpus_data
+    test_db = tmp_path / "corpus_test.db"
+    init_db(db_path=test_db, seed_if_empty=True, root_dir=ROOT)
+
+    stats = ingest_corpus_data(
+        include_historical=True,
+        include_recent=True,
+        include_otrf=True,
+        include_cicids=True,
+        include_sparta_satellite=True,
+        db_path=test_db,
+        root_dir=ROOT,
+    )
+    assert stats["historical_ingested"] >= 10
+    assert stats["recent_ingested"] >= 10
+    assert stats["total_new_ingested"] >= 30
+    assert stats["total_alerts_in_db"] > 62
+
+    alerts = get_all_alerts(db_path=test_db)
+    assert len(alerts) == stats["total_alerts_in_db"]
+

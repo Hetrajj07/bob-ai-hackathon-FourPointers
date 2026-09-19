@@ -478,3 +478,113 @@ def reset_db(root_dir: Path | None = None, db_path: Path | str | None = None) ->
         conn.execute("DELETE FROM audit_log")
     seed_from_files(conn, root)
     conn.close()
+
+
+def ingest_corpus_data(
+    include_historical: bool = True,
+    include_recent: bool = True,
+    include_otrf: bool = True,
+    include_cicids: bool = True,
+    include_sparta_satellite: bool = True,
+    db_path: Path | str | None = None,
+    root_dir: Path | None = None,
+) -> dict[str, Any]:
+    """Ingest historical archive and recent multi-source threats into SQLite database."""
+    from src.threatfusion.normalizer import normalize_otrf, normalize_cicids
+    from src.threatfusion.enrichment import enrich_record
+
+    target = get_db_path(db_path)
+    root = root_dir or ROOT_DIR
+    conn = get_connection(target)
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    stats = {
+        "historical_ingested": 0,
+        "recent_ingested": 0,
+        "otrf_ingested": 0,
+        "cicids_ingested": 0,
+        "sparta_satellite_ingested": 0,
+        "total_new_ingested": 0,
+    }
+
+    # First update asset inventory from assets.json
+    assets_file = root / "src" / "data" / "assets.json"
+    if assets_file.exists():
+        with assets_file.open(encoding="utf-8") as f:
+            assets = json.load(f)
+        for host, meta in assets.items():
+            conn.execute(
+                """
+                INSERT OR REPLACE INTO assets (host, criticality, mission_role, zone, updated_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    host.strip().upper(),
+                    int(meta.get("criticality", 50)),
+                    meta.get("mission_role", "Standard system"),
+                    meta.get("zone", "corporate"),
+                    now_iso,
+                ),
+            )
+
+    all_records: list[dict[str, Any]] = []
+
+    # 1. Historical Threats (Archive)
+    if include_historical:
+        hist_file = root / "src" / "data" / "historical" / "historical_threats.json"
+        if hist_file.exists():
+            with hist_file.open(encoding="utf-8") as f:
+                hist_records = [enrich_record(r, root=root) for r in json.load(f)]
+                stats["historical_ingested"] = len(hist_records)
+                all_records.extend(hist_records)
+
+    # 2. Recent Threats (September Active Telemetry)
+    if include_recent:
+        recent_file = root / "src" / "data" / "recent" / "recent_threats.json"
+        if recent_file.exists():
+            with recent_file.open(encoding="utf-8") as f:
+                recent_records = [enrich_record(r, root=root) for r in json.load(f)]
+                stats["recent_ingested"] = len(recent_records)
+                all_records.extend(recent_records)
+
+    # 3. Real OTRF Sysmon Events
+    if include_otrf:
+        otrf_file = root / "src" / "data" / "real" / "otrf_sample.json"
+        if otrf_file.exists():
+            with otrf_file.open(encoding="utf-8") as f:
+                otrf_records = [enrich_record(normalize_otrf(ev), root=root) for ev in json.load(f)]
+                stats["otrf_ingested"] = len(otrf_records)
+                all_records.extend(otrf_records)
+
+    # 4. Real CIC-IDS2017 Network Flows
+    if include_cicids:
+        cicids_file = root / "src" / "data" / "real" / "cicids_sample.json"
+        if cicids_file.exists():
+            with cicids_file.open(encoding="utf-8") as f:
+                cicids_records = [enrich_record(normalize_cicids(fl), root=root) for fl in json.load(f)]
+                stats["cicids_ingested"] = len(cicids_records)
+                all_records.extend(cicids_records)
+
+    # 5. SPARTA Satellite Telemetry Chain
+    if include_sparta_satellite:
+        sat_file = root / "src" / "data" / "space" / "satellite_demo.json"
+        if sat_file.exists():
+            with sat_file.open(encoding="utf-8") as f:
+                sat_records = [enrich_record(r, root=root) for r in json.load(f)]
+                stats["sparta_satellite_ingested"] = len(sat_records)
+                all_records.extend(sat_records)
+
+    with conn:
+        for r in all_records:
+            _insert_alert_record(conn, r, now_iso)
+        conn.execute(
+            "INSERT INTO audit_log (timestamp, action, details) VALUES (?, ?, ?)",
+            (now_iso, "ingest_corpus_data", f"Ingested corpus: {stats}"),
+        )
+
+    stats["total_new_ingested"] = len(all_records)
+    total_in_db = conn.execute("SELECT COUNT(*) FROM alerts").fetchone()[0]
+    stats["total_alerts_in_db"] = total_in_db
+    conn.close()
+    return stats
+
