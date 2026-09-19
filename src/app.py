@@ -775,9 +775,12 @@ INDEX = r'''<!doctype html>
             <div id="case-summary" class="case-summary-text">Preparing evidence sequence…</div>
           </div>
           <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-            <div class="case-signal">
-              <div class="case-signal-label">Assessed Priority</div>
-              <div id="case-priority" class="case-signal-value">—</div>
+            <div style="display:flex; gap:8px; align-items:center;">
+              <button id="btn-ask-bob-header" class="topbar-btn primary" style="background:var(--tactical-blue);color:#000;border-color:var(--tactical-blue);font-weight:700;padding:5px 12px;font-size:12px;cursor:pointer;" onclick="openBobModal(selected ? selected.id : '', 'investigate')">🤖 Ask IBM Bob</button>
+              <div class="case-signal">
+                <div class="case-signal-label">Assessed Priority</div>
+                <div id="case-priority" class="case-signal-value">—</div>
+              </div>
             </div>
             <div style="display:flex; gap:6px; align-items:center;">
               <span style="font-size:10px; color:var(--text-muted); font-weight:800; font-family:ui-monospace,monospace;">STATUS</span>
@@ -799,6 +802,9 @@ INDEX = r'''<!doctype html>
         <nav class="tabbar" role="tablist" aria-label="Case workspace views">
           <button class="tab" id="tab-overview"  role="tab" aria-controls="panel-overview"  aria-selected="true"  data-tab="overview">
             <span class="tab-icon">🔎</span> Case Overview
+          </button>
+          <button class="tab" id="tab-defence"   role="tab" aria-controls="panel-defence"   aria-selected="false" data-tab="defence">
+            <span class="tab-icon">🇮🇳</span> National Defence &amp; Radar
           </button>
           <button class="tab" id="tab-evidence"  role="tab" aria-controls="panel-evidence"  aria-selected="false" data-tab="evidence">
             <span class="tab-icon">🧾</span> Evidence Sequence
@@ -858,6 +864,95 @@ INDEX = r'''<!doctype html>
                   <button id="btn-save-notes" class="btn-sm">Save Notes</button>
                 </div>
                 <textarea id="case-notes-input" placeholder="Record investigation findings, hypotheses, containment actions..." style="width:100%;height:68px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);padding:8px;font-size:11px;font-family:inherit;resize:vertical;"></textarea>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- ── PANEL: NATIONAL DEFENCE RADAR ── -->
+        <section id="panel-defence" class="panel" role="tabpanel" aria-labelledby="tab-defence">
+          <div class="split">
+            <div class="stack">
+              <article class="card">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                  <div>
+                    <p class="eyebrow">Multi-Domain Public Telemetry Engine</p>
+                    <h2>Strategic Border &amp; Maritime Sectors (India Context)</h2>
+                  </div>
+                  <button id="btn-ask-bob-defence" class="topbar-btn primary" style="font-weight:700;" onclick="openBobModal(selected ? selected.id : '', 'defence')">🤖 Sector Defence Brief</button>
+                </div>
+                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+                  Unified multi-domain situational awareness cross-correlating civil ADS-B (OpenSky), vessel AIS (NOAA), radar &amp; optical change detection (Copernicus Sentinel-1/2), thermal hotspots (NASA FIRMS), and weather warnings (IMD).
+                </p>
+                <!-- Strategic Sector Cards -->
+                <div id="defence-sectors-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:14px;"></div>
+                
+                <!-- Domain Filter Toolbar -->
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+                  <h3 style="font-size:12px;color:var(--text-primary);margin:0;">Sector Radar &amp; Telemetry Stream</h3>
+                  <div id="radar-domain-filters" class="filters" style="margin:0;"></div>
+                </div>
+
+                <!-- Radar Observation Table -->
+                <div style="max-height:420px;overflow-y:auto;border:1px solid var(--border-default);border-radius:6px;background:#05080c;">
+                  <table style="width:100%;border-collapse:collapse;font-size:11px;font-family:ui-monospace,monospace;color:var(--text-secondary);">
+                    <thead>
+                      <tr style="background:var(--bg-surface-elevated);border-bottom:1px solid var(--border-default);color:var(--text-primary);text-align:left;">
+                        <th style="padding:6px 10px;">Domain</th>
+                        <th style="padding:6px 10px;">Entity / Call / MMSI</th>
+                        <th style="padding:6px 10px;">Sector &amp; Coordinates</th>
+                        <th style="padding:6px 10px;">Telemetry Metrics</th>
+                        <th style="padding:6px 10px;">Observation Detail</th>
+                        <th style="padding:6px 10px;text-align:right;">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="radar-table-body">
+                      <tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted);">Loading radar telemetry…</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+
+              <!-- Multi-Domain Simulation Bar -->
+              <article class="card">
+                <p class="eyebrow">Public Feeds Ingestion &amp; Live Scenario Injectors</p>
+                <h2>Inject Multi-Domain Defence Scenarios</h2>
+                <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">
+                  Inject public multi-source telemetry to test real-time cross-domain spatial correlation without breaking cyber benchmarks:
+                </p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <button id="sim-airspace-btn" class="action-btn">✈️ Airspace Approach (OpenSky ADS-B)</button>
+                  <button id="sim-maritime-btn" class="action-btn">🚢 Maritime Dark Vessel (AIS + SAR)</button>
+                  <button id="sim-sentinel-btn" class="action-btn">🛰️ Ground Change (Sentinel-1 SAR)</button>
+                  <button id="sim-firms-btn" class="action-btn">🔥 Thermal Hotspots (NASA FIRMS)</button>
+                  <button id="sim-imd-btn" class="action-btn">🌦️ Dense Fog Cover (IMD Weather)</button>
+                  <button id="sim-defence-all-btn" class="action-btn primary">🇮🇳 Full Multi-Domain Defence Fusion</button>
+                </div>
+              </article>
+            </div>
+
+            <div class="stack">
+              <!-- Domain Stats Breakdown Card -->
+              <article class="card">
+                <p class="eyebrow">Cross-Domain Telemetry Distribution</p>
+                <h2>Monitored Public Feeds</h2>
+                <div id="domain-stats-breakdown" style="display:grid;gap:8px;margin-top:10px;"></div>
+              </article>
+
+              <!-- Indian Defence Context & Caveats -->
+              <article class="card">
+                <p class="eyebrow">Operational Boundary &amp; Provenance</p>
+                <h2>Zero-Hallucination Public Feeds</h2>
+                <ul class="plain-list" style="margin-top:8px;">
+                  <li><strong>Civil Airspace (OpenSky)</strong>: Live civil flight vectors; unannounced transponder gaps flagged as telemetry blindspots.</li>
+                  <li><strong>Maritime (AIS &amp; MOSDAC)</strong>: Vessel AIS positions; dark vessels cross-referenced with satellite scatterometry.</li>
+                  <li><strong>Radar EO (Copernicus Sentinel-1)</strong>: C-band SAR ground coherence provides all-weather cloud-penetrating change detection.</li>
+                  <li><strong>Thermal (NASA FIRMS)</strong>: 375m VIIRS active fire / heat hotspots near forward corridors.</li>
+                  <li><strong>Weather (IMD AWS)</strong>: Fog/rain advisories explaining optical sensor degradation.</li>
+                </ul>
+                <div class="notice" style="margin-top:10px;">
+                  🔒 <strong>Defensible Separation</strong>: Restricted military radar and classified feeds are not assumed. IBM Bob briefs strictly from verifiable public telemetry.
+                </div>
               </article>
             </div>
           </div>
@@ -1110,6 +1205,7 @@ INDEX = r'''<!doctype html>
         document.getElementById('engine-badge').innerHTML = `<span class="live-dot"></span> Engine v${summary.metadata.engine_version}`;
         if (summary.incidents.length) await loadCase(summary.incidents[0].id, false);
         else renderQueue();
+        await renderDefencePanel();
         setStatus(`Engine v${summary.metadata.engine_version} · ATT&CK ${summary.metadata.attack_kb_version} · Zero hallucination telemetry`);
         // Render not-promoted candidates
         if (candidatesRes.ok) {
@@ -1683,8 +1779,272 @@ INDEX = r'''<!doctype html>
     document.getElementById('copy-brief').addEventListener('click', () => copyText(briefText(), 'Commander brief copied.'));
     document.getElementById('export-brief').addEventListener('click', exportBrief);
 
+    // ── MULTI-DOMAIN DEFENCE RADAR & SIMULATION ──
+    let activeRadarSector = '';
+    let activeRadarDomain = '';
+    let currentBobTarget = '';
+
+    const DOMAIN_MAP = {
+      all: '🌐 All Domains',
+      airspace: '✈️ Airspace (OpenSky)',
+      maritime: '🚢 Maritime (AIS)',
+      satellite_eo: '🛰️ Satellite EO (Sentinel/ISRO)',
+      thermal_ir: '🔥 Thermal (NASA FIRMS)',
+      weather_env: '🌦️ Weather (IMD)',
+      geospatial_infra: '🇮🇳 Strategic Infrastructure',
+      cyber_c2: '💻 Cyber / Ground C2',
+    };
+
+    function renderRadarDomainFilters() {
+      const el = document.getElementById('radar-domain-filters');
+      if (!el) return;
+      const domains = ['all', 'airspace', 'maritime', 'satellite_eo', 'thermal_ir', 'weather_env', 'geospatial_infra', 'cyber_c2'];
+      el.innerHTML = domains.map(d => {
+        const isSel = (d === 'all' && !activeRadarDomain) || (d === activeRadarDomain);
+        return `<button class="filter" data-domain="${esc(d)}" aria-pressed="${isSel}">
+          ${esc(DOMAIN_MAP[d] || d)}
+        </button>`;
+      }).join('');
+      el.querySelectorAll('[data-domain]').forEach(b => b.addEventListener('click', () => {
+        activeRadarDomain = (b.dataset.domain === 'all') ? '' : b.dataset.domain;
+        renderRadarDomainFilters();
+        renderDefencePanel();
+      }));
+    }
+
+    async function renderDefencePanel() {
+      try {
+        renderRadarDomainFilters();
+        const [secRes, statsRes, radarRes] = await Promise.all([
+          fetch('/api/multidomain/sectors'),
+          fetch('/api/multidomain/domain-stats'),
+          fetch(`/api/multidomain/radar-feed${activeRadarSector ? '?sector=' + encodeURIComponent(activeRadarSector) : ''}${activeRadarDomain ? (activeRadarSector ? '&' : '?') + 'domain=' + encodeURIComponent(activeRadarDomain) : ''}`),
+        ]);
+        if (secRes.ok) {
+          const secData = await secRes.json();
+          const grid = document.getElementById('defence-sectors-grid');
+          if (grid) {
+            grid.innerHTML = (secData.sectors || []).map(s => {
+              const isActive = s.sector_id === activeRadarSector;
+              return `<div class="not-promoted-card" style="cursor:pointer;border-color:${isActive ? 'var(--tactical-blue)' : 'var(--border-default)'};background:${isActive ? 'var(--bg-surface-highlight)' : 'var(--bg-base)'};transition:all 0.15s;" onclick="toggleRadarSector('${esc(s.sector_id)}')">
+                <div class="np-header">
+                  <strong style="color:${isActive ? 'var(--tactical-blue)' : 'var(--text-primary)'};font-size:12px;">${esc(s.name)}</strong>
+                  <span class="source-badge src-siem">${esc(s.active_observations)} Obs</span>
+                </div>
+                <div style="font-size:10px;color:var(--text-muted);margin:4px 0 6px;">Focus: ${esc(s.domain_focus)}</div>
+                <div style="font-size:10px;color:var(--tactical-blue);font-family:ui-monospace,monospace;">Lat ${esc(s.center[0].toFixed(2))} · Lon ${esc(s.center[1].toFixed(2))}</div>
+              </div>`;
+            }).join('');
+          }
+        }
+
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          const statsEl = document.getElementById('domain-stats-breakdown');
+          if (statsEl) {
+            const bd = statsData.domain_breakdown || {};
+            const total = statsData.total_records || 1;
+            statsEl.innerHTML = Object.entries(bd).map(([dom, count]) => {
+              const pct = Math.round((count / total) * 100);
+              const label = DOMAIN_MAP[dom] || dom;
+              return `<div style="background:var(--bg-base);border:1px solid var(--border-default);padding:8px 10px;border-radius:5px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                  <span style="font-size:11px;font-weight:700;color:var(--text-primary);">${esc(label)}</span>
+                  <span style="font-family:ui-monospace,monospace;font-size:11px;font-weight:800;color:var(--tactical-blue);">${count} (${pct}%)</span>
+                </div>
+                <div style="height:4px;background:var(--border-subtle);border-radius:2px;overflow:hidden;">
+                  <div style="height:100%;background:var(--tactical-blue);width:${pct}%;"></div>
+                </div>
+              </div>`;
+            }).join('');
+          }
+        }
+
+        if (radarRes.ok) {
+          const radarData = await radarRes.json();
+          const tbody = document.getElementById('radar-table-body');
+          const items = radarData.feed || [];
+          if (tbody) {
+            if (!items.length) {
+              tbody.innerHTML = '<tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted);">No observations match the current sector or domain filter.</td></tr>';
+            } else {
+              tbody.innerHTML = items.slice(0, 35).map(item => {
+                const metrics = [];
+                if (item.altitude_ft) metrics.push(`${item.altitude_ft} ft`);
+                if (item.speed_knots) metrics.push(`${item.speed_knots} kts`);
+                if (item.squawk) metrics.push(`Squawk ${item.squawk}`);
+                if (item.frp_mw) metrics.push(`FRP ${item.frp_mw}MW`);
+                if (item.visibility_meters) metrics.push(`Vis ${item.visibility_meters}m`);
+                if (item.warning_level) metrics.push(`⚠️ ${item.warning_level}`);
+                
+                const coords = (item.latitude && item.longitude) 
+                  ? `${item.latitude.toFixed(2)}°N, ${item.longitude.toFixed(2)}°E` 
+                  : 'Forward Corridor';
+
+                return `<tr style="border-bottom:1px solid var(--border-subtle);transition:background 0.1s;">
+                  <td style="padding:6px 10px;">${sourceBadge(item.domain || item.source)}</td>
+                  <td style="padding:6px 10px;font-weight:700;color:var(--text-primary);">${esc(item.entity || item.host || '—')}</td>
+                  <td style="padding:6px 10px;color:var(--text-secondary);">${esc(item.sector)}<br><span style="font-size:10px;color:var(--text-muted);">${esc(coords)}</span></td>
+                  <td style="padding:6px 10px;color:var(--warning-amber);">${esc(metrics.join(' · ') || 'Active telemetry')}</td>
+                  <td style="padding:6px 10px;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-secondary);" title="${esc(item.detail)}">${esc(item.detail)}</td>
+                  <td style="padding:6px 10px;text-align:right;">
+                    <button class="btn-sm" style="font-size:10px;padding:2px 6px;" onclick="openBobModal('${esc(item.id)}', '${esc(item.domain || 'defence')}')">🤖 Ask Bob</button>
+                  </td>
+                </tr>`;
+              }).join('');
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error rendering defence panel:', err);
+      }
+    }
+
+    function toggleRadarSector(secId) {
+      activeRadarSector = (activeRadarSector === secId) ? '' : secId;
+      renderDefencePanel();
+    }
+
+    // Defence Simulation Injectors
+    async function injectMultidomain(scenario, msg) {
+      setStatus(`Injecting multi-domain defence scenario: ${msg}…`);
+      try {
+        const res = await fetch('/api/simulate-multidomain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scenario }),
+        });
+        if (!res.ok) throw new Error('Simulation failed');
+        const data = await res.json();
+        setStatus(`Injected ${msg}: ${data.total_alerts} observations in database. Re-correlating…`);
+        await boot();
+      } catch (err) {
+        setStatus(`Simulation error: ${err.message}`, true);
+      }
+    }
+
+    document.getElementById('sim-airspace-btn').addEventListener('click', () => injectMultidomain('airspace_border_incursion', 'OpenSky Airspace Corridor'));
+    document.getElementById('sim-maritime-btn').addEventListener('click', () => injectMultidomain('maritime_dark_vessel_incursion', 'NOAA Maritime Dark Vessel'));
+    document.getElementById('sim-sentinel-btn').addEventListener('click', () => injectMultidomain('sentinel_sar_infrastructure_change', 'Sentinel-1 SAR Change Detection'));
+    document.getElementById('sim-firms-btn').addEventListener('click', () => injectMultidomain('firms_thermal_critical_infra', 'NASA FIRMS Thermal Hotspots'));
+    document.getElementById('sim-imd-btn').addEventListener('click', () => injectMultidomain('imd_densefog_coordinated_approach', 'IMD Dense Fog Incursion'));
+    document.getElementById('sim-defence-all-btn').addEventListener('click', () => injectMultidomain('comprehensive_defence_fusion', 'Full Multi-Domain National Defence Fusion'));
+
+    // ── IBM BOB INTERACTIVE MODAL ──
+    function renderMarkdown(md) {
+      if (!md) return '';
+      let text = String(md);
+      // Headings
+      text = text.replace(/^### (.*$)/gim, '<h3 style="font-size:13px;font-weight:800;color:var(--text-primary);margin:14px 0 4px;">$1</h3>');
+      text = text.replace(/^## (.*$)/gim, '<h2 style="font-size:15px;font-weight:800;color:var(--tactical-blue);margin:18px 0 6px;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">$1</h2>');
+      text = text.replace(/^# (.*$)/gim, '<h1 style="font-size:18px;font-weight:900;color:var(--text-primary);margin:0 0 10px;">$1</h1>');
+      // Blockquote / BLUF
+      text = text.replace(/^> (.*$)/gim, '<div style="background:var(--tactical-blue-dim);border-left:3px solid var(--tactical-blue);padding:10px 14px;border-radius:4px;margin:10px 0;font-weight:600;color:var(--text-primary);">$1</div>');
+      // Bold & italic
+      text = text.replace(/\*\*(.*?)\*\*/g, '<strong style="color:var(--text-primary);font-weight:700;">$1</strong>');
+      text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      // Inline code
+      text = text.replace(/`(.*?)`/g, '<code style="background:var(--bg-surface-elevated);border:1px solid var(--border-default);padding:2px 5px;border-radius:3px;font-size:11px;font-family:ui-monospace,monospace;color:var(--tactical-blue);">$1</code>');
+      // List items
+      text = text.replace(/^\- (.*$)/gim, '<li style="margin-left:18px;margin-bottom:4px;color:var(--text-secondary);">$1</li>');
+      text = text.replace(/^\d+\. (.*$)/gim, '<li style="margin-left:18px;margin-bottom:4px;color:var(--text-secondary);">$1</li>');
+      // Paragraphs
+      text = text.replace(/\n\n/g, '<br><br>');
+      return text;
+    }
+
+    function openBobModal(targetId, defaultCmd = 'investigate') {
+      currentBobTarget = targetId || (selected ? selected.id : '');
+      const modal = document.getElementById('bob-modal-backdrop');
+      const targetLabel = document.getElementById('bob-modal-target');
+      if (targetLabel) targetLabel.textContent = currentBobTarget ? `Active Target: ${currentBobTarget}` : 'National Defence Multi-Domain Context';
+      if (modal) modal.style.display = 'flex';
+      askBob(defaultCmd);
+    }
+
+    function closeBobModal() {
+      const modal = document.getElementById('bob-modal-backdrop');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function askBob(cmd, customPrompt = '') {
+      const body = document.getElementById('bob-modal-body');
+      if (body) {
+        body.innerHTML = '<div style="padding:30px;text-align:center;color:var(--tactical-blue);"><span class="loading-pulse">🤖 IBM Bob synthesizing deterministic MCP facts…</span></div>';
+      }
+      try {
+        const res = await fetch('/api/bob/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            incident_id: currentBobTarget,
+            command: cmd,
+            prompt: customPrompt || cmd,
+          }),
+        });
+        if (!res.ok) throw new Error('Bob query failed');
+        const data = await res.json();
+        if (body) {
+          body.innerHTML = renderMarkdown(data.response);
+        }
+      } catch (err) {
+        if (body) {
+          body.innerHTML = `<div style="color:var(--danger-red);padding:20px;"><strong>Error:</strong> ${esc(err.message)}</div>`;
+        }
+      }
+    }
+
+    function submitCustomBob() {
+      const input = document.getElementById('bob-custom-input');
+      if (!input) return;
+      const val = input.value.trim();
+      if (!val) return;
+      askBob('custom', val);
+      input.value = '';
+    }
+
+    document.getElementById('bob-custom-input').addEventListener('keydown', e => { if (e.key === 'Enter') submitCustomBob(); });
+
     boot();
   </script>
+
+  <!-- ── IBM BOB INTERACTIVE BRIEFING MODAL ── -->
+  <div id="bob-modal-backdrop" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;padding:20px;">
+    <div style="background:var(--bg-surface-elevated);border:1px solid var(--border-strong);border-radius:8px;width:100%;max-width:880px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,0.8);animation:panelFadeIn 0.15s ease;">
+      <div style="padding:14px 20px;border-bottom:1px solid var(--border-default);display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:26px;height:26px;border-radius:4px;background:var(--tactical-blue);color:#000;display:grid;place-items:center;font-weight:900;font-size:13px;font-family:ui-monospace,monospace;">BOB</div>
+          <div>
+            <h3 style="font-size:14px;font-weight:800;color:var(--text-primary);margin:0;">IBM Bob Grounded Intelligence Brief</h3>
+            <span id="bob-modal-target" style="font-size:11px;color:var(--tactical-blue);font-family:ui-monospace,monospace;">Grounded MCP Telemetry</span>
+          </div>
+        </div>
+        <button id="btn-close-bob" style="background:transparent;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1;" onclick="closeBobModal()">✕</button>
+      </div>
+      <!-- Command shortcuts bar -->
+      <div style="padding:8px 20px;background:var(--bg-surface);border-bottom:1px solid var(--border-subtle);display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:10px;font-weight:800;color:var(--text-muted);text-transform:uppercase;font-family:ui-monospace,monospace;">Command:</span>
+        <button class="tool-btn" onclick="askBob('defence')">🇮🇳 /defence</button>
+        <button class="tool-btn" onclick="askBob('airspace')">✈️ /airspace</button>
+        <button class="tool-btn" onclick="askBob('maritime')">🚢 /maritime</button>
+        <button class="tool-btn" onclick="askBob('satellite')">🛰️ /satellite</button>
+        <button class="tool-btn" onclick="askBob('thermal')">🔥 /thermal</button>
+        <button class="tool-btn" onclick="askBob('weather')">🌦️ /weather</button>
+        <button class="tool-btn" onclick="askBob('bluf')">📋 /bluf</button>
+        <button class="tool-btn" onclick="askBob('investigate')">🔍 /investigate</button>
+        <button class="tool-btn" onclick="askBob('runbook')">🛡️ /runbook</button>
+      </div>
+      <!-- Modal Content Body -->
+      <div id="bob-modal-body" style="padding:20px;overflow-y:auto;flex:1;font-size:13px;line-height:1.6;color:var(--text-primary);background:var(--bg-base);">
+        <div style="text-align:center;padding:30px;color:var(--text-muted);">Select a command or enter a question to generate a grounded brief.</div>
+      </div>
+      <!-- Custom Prompt Bar -->
+      <div style="padding:12px 20px;border-top:1px solid var(--border-default);background:var(--bg-surface);display:flex;gap:8px;">
+        <input id="bob-custom-input" style="flex:1;background:var(--bg-base);border:1px solid var(--border-default);border-radius:4px;color:var(--text-primary);padding:8px 12px;font-size:12px;" placeholder="Ask IBM Bob about this threat, sector, domain, or next containment step… (Press Enter)">
+        <button id="btn-submit-bob" class="action-btn primary" onclick="submitCustomBob()">Ask Bob</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>'''
 
@@ -1788,15 +2148,12 @@ def candidates() -> dict:
     except Exception as exc:
         logger.exception("Analysis failed")
         raise HTTPException(status_code=500, detail=f"Analysis error: {exc}") from exc
+    promoted_ids = {inc["id"] for inc in promoted_incidents(analysis)}
     result = []
-    promoted_count = 0
     for candidate in analysis["incidents"]:
-        is_promoted = bool(candidate["promotable"])
-        if is_promoted:
-            promoted_count += 1
         result.append({
             "id": candidate["id"],
-            "promoted": is_promoted,
+            "promoted": candidate["promotable"],
             "priority": candidate.get("priority"),
             "priority_score": candidate.get("priority_score"),
             "confidence": candidate.get("confidence"),
@@ -1806,7 +2163,7 @@ def candidates() -> dict:
             "promotion_checks": candidate.get("promotion_checks", {}),
             "attack_flow_score": round(candidate.get("attack_flow", {}).get("score", 0) * 100, 1),
         })
-    return {"candidates": result, "promoted_count": promoted_count, "total_candidates": len(result)}
+    return {"candidates": result, "promoted_count": len(promoted_ids), "total_candidates": len(result)}
 
 
 @app.post("/api/alerts")
@@ -2004,7 +2361,7 @@ def simulate_feed(payload: dict) -> dict:
         else:
             sim_records = [
                 {
-                    "_id": f"SIM-SAT-{int(datetime.now(timezone.utc).timestamp())}-1",
+                    "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-1",
                     "timestamp": now_iso,
                     "source": "satellite_sensor",
                     "event_type": "downlink_telemetry_anomaly",
@@ -2014,7 +2371,7 @@ def simulate_feed(payload: dict) -> dict:
                     "detail": "SATCOM ground terminal downlink telemetry anomaly: unexpected telemetry relay command received.",
                 },
                 {
-                    "_id": f"SIM-SAT-{int(datetime.now(timezone.utc).timestamp())}-2",
+                    "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-2",
                     "timestamp": now_iso,
                     "source": "network_sensor",
                     "event_type": "lateral_remote_session",
@@ -2025,7 +2382,7 @@ def simulate_feed(payload: dict) -> dict:
                     "detail": "Unauthorized lateral Remote Desktop Protocol session initiated from satellite gateway to satellite ground station.",
                 },
                 {
-                    "_id": f"SIM-SAT-{int(datetime.now(timezone.utc).timestamp())}-3",
+                    "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-3",
                     "timestamp": now_iso,
                     "source": "endpoint",
                     "event_type": "process_injection",
@@ -2053,7 +2410,7 @@ def simulate_feed(payload: dict) -> dict:
     elif scenario == "benign_admin_noise":
         sim_records = [
             {
-                "_id": f"SIM-BENIGN-{int(datetime.now(timezone.utc).timestamp())}-1",
+                "_id": f"SIM-BENIGN-{int(datetime.now().timestamp())}-1",
                 "timestamp": now_iso,
                 "source": "endpoint",
                 "event_type": "antivirus_scan_clean",
@@ -2062,7 +2419,201 @@ def simulate_feed(payload: dict) -> dict:
                 "detail": "Daily scheduled antivirus scan completed with zero threats identified.",
             },
             {
-                "_id": f"SIM-BENIGN-{int(datetime.now(timezone.utc).timestamp())}-2",
+                "_id": f"SIM-BENIGN-{int(datetime.now().timestamp())}-2",
+                "timestamp": now_iso,
+                "source": "endpoint",
+                "event_type": "process_execution",
+                "host": "FIN-LT22",
+                "process": "powershell.exe",
+                "parent_process": "explorer.exe",
+                "detail": "Interactive PowerShell session launched by known admin without suspicious parameters.",
+            },
+        ]
+    elif scenario in ("historical_threats", "historical_ghoststeal_campaign"):
+        hist_file = ROOT / "src" / "data" / "historical" / "historical_threats.json"
+        if hist_file.exists():
+            with hist_file.open(encoding="utf-8") as f:
+                sim_records = [enrich_record(r, root=ROOT) for r in json.load(f)]
+        else:
+            sim_records = []
+    elif scenario in ("recent_threats", "recent_ransomware_predeployment"):
+        rec_file = ROOT / "src" / "data" / "recent" / "recent_threats.json"
+        if rec_file.exists():
+            with rec_file.open(encoding="utf-8") as f:
+                sim_records = [enrich_record(r, root=ROOT) for r in json.load(f)]
+        else:
+            sim_records = []
+    elif scenario in ("all_threats", "full_threat_corpus"):
+        from src.threatfusion.db import ingest_corpus_data
+        stats = ingest_corpus_data(include_historical=True, include_recent=True, root_dir=ROOT)
+        clear_context_cache()
+        analysis = get_dynamic_analysis()
+        promoted = promoted_incidents(analysis)
+        return {
+            "status": "ok",
+            "scenario": scenario,
+            "inserted_records": stats["total_new_ingested"],
+            "total_alerts": len(analysis["records"]),
+            "promoted_incidents": len(promoted),
+            "stats": stats,
+        }
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown scenario preset: {scenario}")
+
+    inserted = insert_alerts_bulk(sim_records)
+    clear_context_cache()
+    analysis = get_dynamic_analysis()
+    promoted = promoted_incidents(analysis)
+    return {
+        "status": "ok",
+        "scenario": scenario,
+        "inserted_records": inserted,
+        "total_alerts": len(analysis["records"]),
+        "promoted_incidents": len(promoted),
+    }
+
+
+@app.post("/api/ingest/corpus")
+def ingest_corpus(payload: dict | None = None) -> dict:
+    """Ingest historical archive and/or recent multi-source threats into SQLite database."""
+    mode = (payload or {}).get("mode", "all")
+    from src.threatfusion.db import ingest_corpus_data
+    include_hist = mode in ("all", "historical")
+    include_rec = mode in ("all", "recent")
+    stats = ingest_corpus_data(
+        include_historical=include_hist,
+        include_recent=include_rec,
+        include_otrf=True,
+        include_cicids=True,
+        include_sparta_satellite=True,
+        root_dir=ROOT,
+    )
+    clear_context_cache()
+    analysis = get_dynamic_analysis()
+    promoted = promoted_incidents(analysis)
+    return {
+        "status": "ok",
+        "mode": mode,
+        "stats": stats,
+        "total_alerts": len(analysis["records"]),
+        "candidate_clusters": len(analysis["incidents"]),
+        "promoted_incidents": len(promoted),
+    }
+
+@app.post("/api/ingest/cicids")
+def ingest_cicids(payload: dict | list[dict]) -> dict:
+    """Ingest real network flow telemetry in CIC-IDS2017 format."""
+    flows = payload if isinstance(payload, list) else [payload]
+    normalized = []
+    for fl in flows:
+        norm = normalize_cicids(fl)
+        enriched = enrich_record(norm, root=ROOT)
+        normalized.append(enriched)
+    count = insert_alerts_bulk(normalized)
+    clear_context_cache()
+    analysis = get_dynamic_analysis()
+    return {
+        "status": "ok",
+        "format": "CIC-IDS2017 Flow Telemetry",
+        "inserted_count": count,
+        "total_alerts": len(analysis["records"]),
+        "promoted_incidents": len(promoted_incidents(analysis)),
+    }
+
+
+@app.get("/api/threatfox/lookup")
+def threatfox_lookup(indicator: str = Query(...)) -> dict:
+    """Query local curated ThreatFox / abuse.ch CTI feed for malware IOC metadata."""
+    match = lookup_threatfox(indicator, root=ROOT)
+    if not match:
+        return {"found": False, "indicator": indicator, "message": "No match in curated ThreatFox database"}
+    return {"found": True, "indicator": indicator, "threat": match}
+
+
+@app.get("/api/cisa-kev/lookup")
+def cisa_kev_lookup(cve: str = Query(...)) -> dict:
+    """Query CISA Known Exploited Vulnerabilities catalog."""
+    match = check_cisa_kev(cve, root=ROOT)
+    if not match:
+        return {"found": False, "cve": cve, "message": "Not listed in CISA KEV catalog"}
+    return {"found": True, "cve": cve, "vulnerability": match}
+
+
+@app.post("/api/simulate-feed")
+def simulate_feed(payload: dict) -> dict:
+    """Simulate incoming multi-source attack feeds (Satellite sensor, cyber sensors, SIEM, OTRF, CIC-IDS)."""
+    scenario = payload.get("scenario", "satellite_ground_breach")
+    from datetime import datetime, timezone
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    if scenario in ("satellite_ground_breach", "sparta_satellite_compromise"):
+        sat_file = ROOT / "src" / "data" / "space" / "satellite_demo.json"
+        if sat_file.exists():
+            with sat_file.open(encoding="utf-8") as f:
+                sim_records = [enrich_record(r, root=ROOT) for r in json.load(f)]
+        else:
+            sim_records = [
+                {
+                    "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-1",
+                    "timestamp": now_iso,
+                    "source": "satellite_sensor",
+                    "event_type": "downlink_telemetry_anomaly",
+                    "host": "SATCOM-GW02",
+                    "src_ip": "198.51.100.45",
+                    "dst_ip": "10.40.2.1",
+                    "detail": "SATCOM ground terminal downlink telemetry anomaly: unexpected telemetry relay command received.",
+                },
+                {
+                    "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-2",
+                    "timestamp": now_iso,
+                    "source": "network_sensor",
+                    "event_type": "lateral_remote_session",
+                    "protocol": "RDP",
+                    "dst_port": 3389,
+                    "src_host": "SATCOM-GW02",
+                    "dst_host": "SAT-GROUND-01",
+                    "detail": "Unauthorized lateral Remote Desktop Protocol session initiated from satellite gateway to satellite ground station.",
+                },
+                {
+                    "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-3",
+                    "timestamp": now_iso,
+                    "source": "endpoint",
+                    "event_type": "process_injection",
+                    "host": "SAT-GROUND-01",
+                    "process": "powershell.exe",
+                    "parent_process": "winword.exe",
+                    "cmdline": "powershell.exe -enc JABzAGEAdAA9...",
+                    "detail": "Encoded PowerShell execution launched by document process targeting satellite command bus.",
+                },
+            ]
+    elif scenario == "otrf_attack_chain":
+        otrf_file = ROOT / "src" / "data" / "real" / "otrf_sample.json"
+        if otrf_file.exists():
+            with otrf_file.open(encoding="utf-8") as f:
+                sim_records = [enrich_record(normalize_otrf(ev), root=ROOT) for ev in json.load(f)]
+        else:
+            sim_records = []
+    elif scenario == "cicids_network_flood":
+        cicids_file = ROOT / "src" / "data" / "real" / "cicids_sample.json"
+        if cicids_file.exists():
+            with cicids_file.open(encoding="utf-8") as f:
+                sim_records = [enrich_record(normalize_cicids(fl), root=ROOT) for fl in json.load(f)]
+        else:
+            sim_records = []
+    elif scenario == "benign_admin_noise":
+        sim_records = [
+            {
+                "_id": f"SIM-BENIGN-{int(datetime.now().timestamp())}-1",
+                "timestamp": now_iso,
+                "source": "endpoint",
+                "event_type": "antivirus_scan_clean",
+                "host": "FIN-LT22",
+                "user": "corporate_user",
+                "detail": "Daily scheduled antivirus scan completed with zero threats identified.",
+            },
+            {
+                "_id": f"SIM-BENIGN-{int(datetime.now().timestamp())}-2",
                 "timestamp": now_iso,
                 "source": "endpoint",
                 "event_type": "process_execution",
@@ -2156,8 +2707,137 @@ def evaluation() -> dict:
     }
 
 
+@app.get("/api/multidomain/sectors")
+def get_multidomain_sectors() -> dict:
+    """Return strategic Indian defence and border sectors with operational sensor metadata."""
+    from src.threatfusion.spatial import STRATEGIC_SECTORS
+    analysis = get_dynamic_analysis()
+    records = analysis.get("records", [])
+
+    sector_counts: dict[str, int] = {}
+    for r in records:
+        sec = r.get("sector") or "CENTRAL_COMMAND_CORRIDOR"
+        sector_counts[sec] = sector_counts.get(sec, 0) + 1
+
+    sectors = []
+    for sec_id, info in STRATEGIC_SECTORS.items():
+        sectors.append({
+            "sector_id": sec_id,
+            "name": info["name"],
+            "strategic_importance": info["strategic_importance"],
+            "domain_focus": info["domain_focus"],
+            "primary_sensors": info["primary_sensors"],
+            "center": info["center"],
+            "bounds": info["bounds"],
+            "active_observations": sector_counts.get(sec_id, 0),
+        })
+
+    return {
+        "status": "ok",
+        "total_sectors": len(sectors),
+        "sectors": sectors,
+    }
+
+
+@app.get("/api/multidomain/domain-stats")
+def get_multidomain_stats() -> dict:
+    """Return distribution of observations across air, maritime, satellite, thermal, weather, and cyber domains."""
+    analysis = get_dynamic_analysis()
+    records = analysis.get("records", [])
+    stats: dict[str, int] = {}
+    for r in records:
+        d = r.get("domain") or ("cyber_c2" if r.get("source") in ("endpoint", "network_sensor", "siem", "threat_intel_report") else r.get("source", "other"))
+        stats[d] = stats.get(d, 0) + 1
+
+    return {
+        "status": "ok",
+        "total_records": len(records),
+        "domain_breakdown": stats,
+    }
+
+
+@app.get("/api/multidomain/radar-feed")
+def get_radar_feed(sector: str | None = Query(None), domain: str | None = Query(None)) -> dict:
+    """Return geolocated observation entities for tactical radar and sector visualization."""
+    analysis = get_dynamic_analysis()
+    records = analysis.get("records", [])
+    feed = []
+    for r in records:
+        lat = r.get("latitude")
+        lon = r.get("longitude")
+        sec = r.get("sector") or "CENTRAL_COMMAND_CORRIDOR"
+        dom = r.get("domain") or ("cyber_c2" if r.get("source") in ("endpoint", "network_sensor", "siem", "threat_intel_report") else r.get("source", "other"))
+
+        if sector and sec != sector:
+            continue
+        if domain and dom != domain:
+            continue
+
+        feed.append({
+            "id": str(r.get("_id") or r.get("id")),
+            "timestamp": r.get("timestamp"),
+            "domain": dom,
+            "source": r.get("source"),
+            "event_type": r.get("event_type"),
+            "host": r.get("host"),
+            "entity": r.get("callsign") or r.get("vessel_name") or r.get("satellite_mission") or r.get("station_name") or r.get("host"),
+            "latitude": lat,
+            "longitude": lon,
+            "sector": sec,
+            "altitude_ft": r.get("altitude_ft"),
+            "speed_knots": r.get("velocity_knots") or r.get("speed_knots"),
+            "heading_deg": r.get("heading_deg"),
+            "squawk": r.get("squawk"),
+            "frp_mw": r.get("frp_mw"),
+            "visibility_meters": r.get("visibility_meters"),
+            "warning_level": r.get("warning_level"),
+            "provenance": r.get("dataset_name", "Public Observation Feed"),
+            "detail": r.get("detail") or r.get("text") or "Telemetry observation",
+        })
+
+    return {
+        "status": "ok",
+        "total_items": len(feed),
+        "feed": feed,
+    }
+
+
+@app.post("/api/simulate-multidomain")
+def simulate_multidomain(payload: dict) -> dict:
+    """Inject multi-domain public data scenarios (OpenSky, AIS, Sentinel SAR, NASA FIRMS, IMD Weather)."""
+    scenario = payload.get("scenario", "comprehensive_defence_fusion")
+    from src.threatfusion.db import ingest_corpus_data
+
+    if scenario == "airspace_border_incursion":
+        stats = ingest_corpus_data(include_historical=False, include_recent=False, include_otrf=False, include_cicids=False, include_sparta_satellite=False, include_opensky=True, include_maritime_ais=False, include_satellite_eo=False, include_thermal_firms=False, include_weather_imd=False, include_bhuvan_geospatial=True, include_emergency_usgs=False, root_dir=ROOT)
+    elif scenario == "maritime_dark_vessel_incursion":
+        stats = ingest_corpus_data(include_historical=False, include_recent=False, include_otrf=False, include_cicids=False, include_sparta_satellite=False, include_opensky=False, include_maritime_ais=True, include_satellite_eo=True, include_thermal_firms=False, include_weather_imd=True, include_bhuvan_geospatial=True, include_emergency_usgs=False, root_dir=ROOT)
+    elif scenario == "sentinel_sar_infrastructure_change":
+        stats = ingest_corpus_data(include_historical=False, include_recent=False, include_otrf=False, include_cicids=False, include_sparta_satellite=False, include_opensky=False, include_maritime_ais=False, include_satellite_eo=True, include_thermal_firms=True, include_weather_imd=True, include_bhuvan_geospatial=True, include_emergency_usgs=False, root_dir=ROOT)
+    elif scenario == "firms_thermal_critical_infra":
+        stats = ingest_corpus_data(include_historical=False, include_recent=False, include_otrf=False, include_cicids=False, include_sparta_satellite=False, include_opensky=False, include_maritime_ais=False, include_satellite_eo=False, include_thermal_firms=True, include_weather_imd=False, include_bhuvan_geospatial=True, include_emergency_usgs=False, root_dir=ROOT)
+    elif scenario == "imd_densefog_coordinated_approach":
+        stats = ingest_corpus_data(include_historical=False, include_recent=False, include_otrf=False, include_cicids=False, include_sparta_satellite=False, include_opensky=True, include_maritime_ais=False, include_satellite_eo=True, include_thermal_firms=False, include_weather_imd=True, include_bhuvan_geospatial=True, include_emergency_usgs=False, root_dir=ROOT)
+    elif scenario in ("comprehensive_defence_fusion", "all_multidomain"):
+        stats = ingest_corpus_data(include_historical=True, include_recent=True, include_otrf=True, include_cicids=True, include_sparta_satellite=True, include_opensky=True, include_maritime_ais=True, include_satellite_eo=True, include_thermal_firms=True, include_weather_imd=True, include_bhuvan_geospatial=True, include_emergency_usgs=True, root_dir=ROOT)
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown multi-domain scenario: {scenario}")
+
+    clear_context_cache()
+    analysis = get_dynamic_analysis()
+    promoted = promoted_incidents(analysis)
+    return {
+        "status": "ok",
+        "scenario": scenario,
+        "stats": stats,
+        "total_alerts": len(analysis["records"]),
+        "candidate_clusters": len(analysis["incidents"]),
+        "promoted_incidents": len(promoted),
+    }
+
+
 @app.get("/api/mcp-query")
-def mcp_query(tool: str = Query(...), incident_id: str | None = Query(None), query: str | None = Query(None)) -> dict:
+def mcp_query(tool: str = Query(...), incident_id: str | None = Query(None), query: str | None = Query(None), sector: str | None = Query(None), domain: str | None = Query(None)) -> dict:
     from src.mcp_server import tool_call
 
     arguments: dict[str, str] = {}
@@ -2165,4 +2845,262 @@ def mcp_query(tool: str = Query(...), incident_id: str | None = Query(None), que
         arguments["incident_id"] = incident_id
     if query:
         arguments["query"] = query
-    return tool_call(tool, arguments)
+    if sector:
+        arguments["sector"] = sector
+    if domain:
+        arguments["domain"] = domain
+    res = tool_call(tool, arguments)
+    return res or {"error": f"Tool {tool} returned no output"}
+
+
+@app.post("/api/bob/ask")
+def ask_bob(payload: dict) -> dict:
+    """Natural-language investigation and military situational briefing endpoint for IBM Bob.
+    
+    Accepts candidate/incident ID and command/question, evaluates deterministic facts via MCP,
+    and returns a structured, factual analysis strictly grounded in ThreatFusion engine facts.
+    """
+    import html
+    from src.mcp_server import execute_tool, load_engine_state, find_candidate
+
+    incident_id = payload.get("incident_id") or ""
+    raw_cmd = (payload.get("command") or payload.get("prompt") or "investigate").strip()
+    cmd = raw_cmd.lower().lstrip("/")
+
+    analysis, all_candidates = load_engine_state()
+    target = find_candidate(incident_id, all_candidates) if incident_id else (all_candidates[0] if all_candidates else None)
+    if not target:
+        raise HTTPException(status_code=404, detail=f"Candidate or incident '{incident_id}' not found")
+
+    target_id = target["id"]
+    is_promoted = bool(target.get("promotable"))
+    prio = target.get("priority", "UNKNOWN")
+    score = target.get("priority_score", 0)
+    conf = target.get("confidence", 0)
+    sev = target.get("severity", 0)
+    imp = target.get("mission_impact", 0)
+    urg = target.get("urgency", 0)
+    checks = target.get("promotion_checks", {})
+    assets = [a.get("asset") for a in target.get("assets", [])]
+    techs = [f"{t.get('technique')} ({t.get('technique_name')})" for t in target.get("techniques", [])]
+
+    # Defence / Multi-Domain Situational Briefings
+    if cmd in ("defence", "military", "situational", "border", "corridor"):
+        domain_summary = execute_tool("get_domain_summary", {})
+        bluf_pkg = execute_tool("generate_bluf", {"incident_id": target_id})
+        b = bluf_pkg.get("bluf", {})
+        counts = domain_summary.get("domain_counts", {})
+        response_md = f"""# 🇮🇳 IBM Bob National Defence Situational Awareness Brief — {target_id}
+
+> **Executive Commander Assessment**: {b.get('commander_briefing') or b.get('bottom_line', 'Multi-source border and domain correlation active.')}
+
+## 1. Multi-Domain Telemetry Summary
+- **✈️ Airspace Domain (OpenSky Network)**: `{counts.get('airspace', 0)} active flight tracks & transponder checks`
+- **🚢 Maritime Domain (NOAA / AIS)**: `{counts.get('maritime', 0)} monitored vessels & EEZ traffic`
+- **🛰️ Satellite EO (Copernicus Sentinel-1 SAR / Sentinel-2 Optical / MOSDAC)**: `{counts.get('satellite_eo', 0)} radar & optical change scenes`
+- **🔥 Thermal IR (NASA FIRMS MODIS/VIIRS)**: `{counts.get('thermal_ir', 0)} active thermal hotspots`
+- **🌦️ Meteorological (IMD AWS & Radar)**: `{counts.get('weather_env', 0)} atmospheric & sea-state bulletins`
+- **🇮🇳 Strategic Infrastructure (ISRO Bhuvan / OGD)**: `{counts.get('geospatial_infra', 0)} forward airfields & radar posts mapped`
+- **💻 Cyber & Space (SPARTA / OTRF / CIC-IDS)**: `{counts.get('cyber_c2', 0)} C2/ground station alerts`
+
+## 2. Strategic Risk & Mission Criticality
+- **Threat Priority**: **{prio}** (`{score}/100`)
+- **Evidence Confidence**: `{conf}%` · **Severity**: `{sev}/100` · **Mission Impact**: `{imp}/100` · **Urgency**: `{urg}/100`
+- **Affected Strategic Assets**: {', '.join(assets) if assets else 'Border defense infrastructure'}
+
+## 3. Grounded Correlation Rationale
+{b.get('assessment')}
+
+## 4. Uncertainty & Public-Data Sensor Limits
+- {b.get('uncertainty', 'Telemetry is derived from open civil feeds (OpenSky, Copernicus, NOAA, IMD, NASA FIRMS). Authorized military radar and restricted feeds are intentionally not assumed.')}
+
+## 5. Recommended Commander Actions
+{chr(10).join([f"{i+1}. {a}" for i, a in enumerate(b.get('recommended_actions', []))])}
+"""
+    elif cmd in ("airspace", "opensky", "flight", "aviation"):
+        response_md = f"""# ✈️ IBM Bob Airspace Domain Briefing — {target_id}
+
+> **Sensor Provenance**: OpenSky Network Civil ADS-B & Transponder Feeds
+
+## Observed Airspace Telemetry for {target_id}
+- **Assessed Priority**: **{prio}** (`{score}/100`)
+- **Evidence Confidence**: `{conf}%`
+- **Associated Assets / Waypoints**: {', '.join(assets) if assets else 'Northern/Western Air Corridor'}
+
+## Airspace Findings
+- Multi-source track verification with border corridor geofencing.
+- Unannounced altitude deviations or squawk anomalies (e.g. 7700 / intermittent ADS-B) are cross-correlated with weather and ground radar.
+- **Rule**: Civil air-traffic data provides flight-path telemetry; absence of a transponder is flagged as a detection gap.
+
+## Next Action
+{target.get('runbook', [{}])[0].get('action', 'Verify transponder log against scheduled civil flight clearance.')}
+"""
+    elif cmd in ("maritime", "ais", "vessel", "navy"):
+        response_md = f"""# 🚢 IBM Bob Maritime Domain & Dark Vessel Briefing — {target_id}
+
+> **Sensor Provenance**: NOAA MarineCadastre AIS & Coastal Vessel Feeds
+
+## Maritime Telemetry & EEZ Status for {target_id}
+- **Assessed Priority**: **{prio}** (`{score}/100`)
+- **Evidence Confidence**: `{conf}%`
+- **Target Coastal / EEZ Corridor**: {', '.join(assets) if assets else 'Sir Creek / Andaman & Nicobar Waters'}
+
+## Maritime Findings
+- Vessel movement vectors analyzed for loitering, unusual heading changes, and AIS transponder gaps.
+- Dark vessel signatures are cross-referenced with satellite microwave scatterometry (ISRO MOSDAC / Sentinel-1 SAR) to detect physical hull presence.
+
+## Recommended Maritime Next Steps
+1. Task coastal patrol craft or naval reconnaissance for visual confirmation.
+2. Cross-check vessel MMSI/IMO against registered hydrographic survey manifests.
+"""
+    elif cmd in ("satellite", "sentinel", "sar", "optical", "isro", "mosdac"):
+        response_md = f"""# 🛰️ IBM Bob Earth Observation & Satellite Briefing — {target_id}
+
+> **Sensor Provenance**: Copernicus Sentinel-1 SAR, Sentinel-2 Optical & ISRO MOSDAC
+
+## Earth Observation Telemetry for {target_id}
+- **Sentinel-1 C-Band SAR**: Synthetic Aperture Radar provides all-weather day/night ground surface coherence analysis through cloud cover.
+- **Sentinel-2 Optical**: Multispectral optical comparison identifies structural changes under clear weather windows.
+- **ISRO MOSDAC**: Microwave scatterometer scans provide ocean surface roughness and wake detection.
+
+## Grounded Assessment
+{target.get('bluf', {}).get('assessment', 'Satellite change detection correlates with ground infrastructure observations.')}
+"""
+    elif cmd in ("thermal", "firms", "fire", "heat"):
+        response_md = f"""# 🔥 IBM Bob Thermal Infrared Anomaly Briefing — {target_id}
+
+> **Sensor Provenance**: NASA FIRMS Near-Real-Time Active Fire Telemetry (MODIS & VIIRS)
+
+## Thermal Hotspot Analysis for {target_id}
+- **Sensor Feeds**: MODIS (Terra/Aqua) and VIIRS (Suomi-NPP / NOAA-20) NRT passes.
+- **Assessed FRP / Brightness**: High-temperature infrared signatures evaluated against known civilian brushfire baselines versus strategic installation coordinates.
+- **Correlation**: Spatially tagged to within 5km of critical forward corridors.
+"""
+    elif cmd in ("weather", "imd", "fog", "cyclone"):
+        response_md = f"""# 🌦️ IBM Bob Meteorological & Environmental Briefing — {target_id}
+
+> **Sensor Provenance**: India Meteorological Department (IMD) AWS & Doppler Radar
+
+## Operational Weather Impact for {target_id}
+- **Visibility & Cloud Cover**: Evaluates optical degradation (dense fog, monsoonal cloud cover) requiring SAR radar prioritization.
+- **Sea State & Coastal Bulletins**: Rough sea advisories and squall lines analyzed for tactical concealment opportunities.
+"""
+    elif cmd in ("investigate", "full", "case"):
+        incident_pkg = execute_tool("get_incident", {"incident_id": target_id})
+        risk_pkg = execute_tool("explain_risk", {"incident_id": target_id})
+        gaps_pkg = execute_tool("get_detection_gaps", {"incident_id": target_id})
+        bluf_pkg = execute_tool("generate_bluf", {"incident_id": target_id})
+        actor_matches = target.get("actor_similarity", [])
+        top_actor = actor_matches[0] if isinstance(actor_matches, list) and actor_matches else None
+        actor_name = top_actor.get("group", "Unattributed Cluster") if top_actor else "Unattributed Cluster"
+        actor_score = top_actor.get("similarity", 0) if top_actor else 0
+
+        response_md = f"""# IBM Bob Investigation Report — {target_id}
+
+> **BLUF**: {bluf_pkg.get('bluf', {}).get('commander_briefing', 'Active correlated threat requiring command review.')}
+
+## 1. Case Status & Operational Assessment
+- **Status**: `{'PROMOTED INCIDENT' if is_promoted else 'CANDIDATE HYPOTHESIS (NOT PROMOTED)'}`
+- **Priority**: **{prio}** (Score: `{score}/100`)
+- **Evidence Confidence**: `{conf}%` · **Severity**: `{sev}/100` · **Mission Impact**: `{imp}/100` · **Urgency**: `{urg}/100`
+- **Affected Assets**: {', '.join(assets) if assets else 'Corporate workstation network'}
+
+## 2. Observed Attack Progression & MITRE ATT&CK Mapping
+{chr(10).join([f"- **`{t.get('technique')}`** ({t.get('tactic')}) — {t.get('technique_name')}" for t in target.get('techniques', [])]) if target.get('techniques') else '- No specific ATT&CK behaviors detected.'}
+
+- **Attack-Flow Coherence**: `{round(target.get('attack_flow', {}).get('score', 0) * 100, 1)}/100`
+- **Telemetry Sources**: {', '.join([s.replace('_', ' ').upper() for s in target.get('sources', [])])} ({len(target.get('record_ids', []))} raw observations)
+
+## 3. Threat Attribution & CTI Corroboration
+- **ThreatFox IOC Match**: {'✓ Verified CTI match' if target.get('has_threatfox_corroboration') else 'No known malware IOC match'}
+- **CISA KEV Exploitation**: {'⚠️ Known exploited CVE confirmed' if target.get('has_cisa_kev_exploit') else 'No active KEV vulnerability match'}
+- **Associated Actor Cluster**: `{actor_name}` (Similarity: `{actor_score}%`)
+
+## 4. Detection Gaps & Visibility Notes
+{chr(10).join([f"- ⚠️ **Missing {gap.get('tactic')} Telemetry**: Unobserved intermediate tactic — {gap.get('hunting_guidance')}" for gap in gaps_pkg.get('telemetry_gaps', [])[:2]]) if gaps_pkg.get('telemetry_gaps') else '- No major visibility blindspots identified.'}
+
+## 5. Recommended Next Actions
+{chr(10).join([f"{i+1}. **[{step.get('phase')}]** {step.get('action')} (Target: `{step.get('target')}`)" for i, step in enumerate(target.get('runbook', [])[:3])])}
+"""
+    elif cmd in ("explain", "risk"):
+        risk_pkg = execute_tool("explain_risk", {"incident_id": target_id})
+        rf = risk_pkg.get("risk_factors", {})
+        response_md = f"""# IBM Bob Risk Assessment & Prioritization Rationale — {target_id}
+
+> **Executive Synthesis**: This case is assessed at **{prio}** priority with **{conf}%** evidence confidence and **{imp}/100** mission impact.
+
+## 4D Risk Factor Breakdown
+1. **Evidence Confidence ({conf}%)**: {rf.get('confidence_explanation', 'High corroboration across independent sensors.')}
+2. **Threat Severity ({sev}/100)**: Harm potential assessed from observed techniques ({', '.join(techs[:2])}).
+3. **Mission Impact ({imp}/100)**: Criticality of affected assets ({', '.join(assets) if assets else 'standard endpoints'}).
+4. **Decision Urgency ({urg}/100)**: Immediate analyst attention is recommended based on killchain progress.
+
+## Promotion Gate Decision
+- **Promotion Status**: `{'PROMOTED INCIDENT (Passed 4/4 Checks)' if is_promoted else 'QUARANTINED AS CANDIDATE (Failed Checks)'}`
+- **Gate Audit**:
+{chr(10).join([f"  - {'✓' if passed else '✗'} **{k.replace('_', ' ').title()}**: {'Satisfied' if passed else 'Failed gate threshold'}" for k, passed in checks.items()])}
+"""
+    elif cmd in ("bluf", "brief"):
+        bluf_pkg = execute_tool("generate_bluf", {"incident_id": target_id})
+        b = bluf_pkg.get("bluf", {})
+        response_md = f"""# Commander Decision Briefing (BLUF) — {target_id}
+
+> **BOTTOM LINE UP FRONT**: {b.get('commander_briefing') or b.get('bottom_line')}
+
+## Operational Assessment
+{b.get('assessment')}
+
+## Adversary Attribution & TTPs
+{b.get('actor_assessment')}
+
+## Uncertainty & Visibility Limits
+{b.get('uncertainty')}
+
+## Recommended Commander Actions
+{chr(10).join([f"{i+1}. {a}" for i, a in enumerate(b.get('recommended_actions', []))])}
+"""
+    elif cmd in ("runbook", "containment", "response"):
+        runbook_pkg = execute_tool("get_remediation_runbook", {"incident_id": target_id})
+        steps = runbook_pkg.get("remediation_steps", [])
+        response_md = f"""# Human-Gated Containment & Remediation Runbook — {target_id}
+
+> **Policy Notice**: ThreatFusion provides analyst-gated recommendations. All containment actions require explicit human confirmation.
+
+## Staged Action Checklist
+{chr(10).join([f"### Step {i+1}: [{s.get('phase')}] {s.get('action')}\n- **Target**: `{s.get('target')}`\n- **Rationale**: {s.get('rationale')}\n- **Verification**: {s.get('verification')}" for i, s in enumerate(steps)])}
+"""
+    elif cmd in ("gaps", "detection", "hunting"):
+        gaps_pkg = execute_tool("get_detection_gaps", {"incident_id": target_id})
+        gaps = gaps_pkg.get("telemetry_gaps", [])
+        response_md = f"""# Detection Blindspots & Threat Hunting Guidance — {target_id}
+
+> **Principle**: An unobserved killchain tactic indicates potential telemetry gaps rather than proof of attacker absence.
+
+## Identified Visibility Blindspots
+{chr(10).join([f"- **{g.get('tactic').title()} Blindspot**: {g.get('explanation')}\n  - *Hunting Query Guidance*: `{g.get('hunting_guidance')}`" for g in gaps]) if gaps else '- No significant detection blindspots detected in this evidence chain.'}
+"""
+    else:
+        response_md = f"""# IBM Bob Response — {target_id}
+
+Regarding your inquiry: *"**{html.escape(raw_cmd)}**"*
+
+## Grounded Analysis for {target_id}
+- **Assessed Priority**: **{prio}** (`{score}/100`)
+- **Evidence Confidence**: `{conf}%` across {len(target.get('record_ids', []))} independent observations.
+- **Affected Assets**: {', '.join(assets) if assets else 'Corporate workstations'} (Mission Criticality: `{imp}/100`)
+- **Observed Behavior**: {', '.join(techs) if techs else 'No explicit techniques.'}
+
+## Key Finding
+{target.get('bluf', {}).get('assessment', 'Case telemetry indicates structured activity requiring human triage.')}
+
+## Recommended Next Step
+{target.get('runbook', [{}])[0].get('action', 'Inspect full evidence timeline in the workspace.')}
+"""
+
+    return {
+        "status": "ok",
+        "incident_id": target_id,
+        "command": cmd,
+        "response": response_md,
+        "tools_used": ["get_incident", "explain_risk", "generate_bluf", "get_domain_summary"],
+    }

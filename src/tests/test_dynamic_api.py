@@ -118,3 +118,17 @@ def test_simulate_feed_and_reset():
     assert reset_res.json()["status"] == "ok"
     assert reset_res.json()["raw_records"] == 62
     assert reset_res.json()["promoted_incidents"] == 4
+
+
+def test_bob_ask_endpoint():
+    summary = client.get("/api/summary").json()
+    inc_id = summary["incidents"][0]["id"]
+
+    for cmd in ("investigate", "explain", "bluf", "runbook", "gaps", "What is the priority score?"):
+        res = client.post("/api/bob/ask", json={"incident_id": inc_id, "command": cmd})
+        assert res.status_code == 200
+        data = res.json()
+        assert data["status"] == "ok"
+        assert data["incident_id"] == inc_id
+        assert len(data["response"]) > 20
+

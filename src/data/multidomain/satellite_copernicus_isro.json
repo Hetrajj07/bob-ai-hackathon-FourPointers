@@ -1,0 +1,43 @@
+[
+  {
+    "scene_id": "S1A_IW_GRDH_1SDV_20260919T021500_041234_04F8A1_E019",
+    "satellite_mission": "Sentinel-1A SAR (C-Band Radar)",
+    "polarisation": "VV+VH",
+    "sensing_time": "2026-09-19T02:15:00Z",
+    "latitude": 34.2800,
+    "longitude": 78.9800,
+    "anomaly_type": "Synthetic Aperture Radar Ground Coherence Loss",
+    "change_magnitude_db": -4.8,
+    "confidence": 92.5,
+    "feature_detected": "New unpaved runway/helipad earthwork activity and heavy vehicle track formation observed through cloud cover.",
+    "detail": "Copernicus Sentinel-1 SAR change detection indicates new engineering earthworks in forward high-altitude sector (LAC Ladakh) penetrated through dense meteorological cloud.",
+    "sector": "NORTHERN_LAC_LADAKH"
+  },
+  {
+    "scene_id": "S2B_MSIL1C_20260919T043019_N0500_R012_T43RGR",
+    "satellite_mission": "Sentinel-2B (Multispectral Optical)",
+    "bands": "B02, B03, B04, B08, B11, B12",
+    "sensing_time": "2026-09-19T04:30:19Z",
+    "latitude": 34.2820,
+    "longitude": 78.9810,
+    "anomaly_type": "Optical Multispectral Infrastructure Anomaly",
+    "change_magnitude_db": 0.0,
+    "confidence": 94.0,
+    "feature_detected": "Hardened modular bunker structures and radio mast shadow signatures confirmed under clear optical window.",
+    "detail": "Copernicus Sentinel-2 multispectral comparison with 30-day baseline confirms 4 newly erected modular structures and high-gain antenna array at the SAR-indicated coordinates.",
+    "sector": "NORTHERN_LAC_LADAKH"
+  },
+  {
+    "scene_id": "MOSDAC_SCAT3_OCEAN_20260919_0500",
+    "satellite_mission": "ISRO MOSDAC / OceanSat-3 Scatterometer",
+    "sensing_time": "2026-09-19T05:00:00Z",
+    "latitude": 10.8500,
+    "longitude": 93.1500,
+    "anomaly_type": "Ocean Surface Radar Wake Signature",
+    "change_magnitude_db": 3.2,
+    "confidence": 88.0,
+    "feature_detected": "Non-transponding surface wake anomaly detected by microwave scatterometry matching dark vessel displacement.",
+    "detail": "ISRO MOSDAC satellite ocean surface radar scan correlates with NOAA dark vessel position in Andaman Sea, verifying physical hull signature despite disabled AIS.",
+    "sector": "ANDAMAN_NICOBAR_EEZ"
+  }
+]

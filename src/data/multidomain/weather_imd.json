@@ -1,0 +1,44 @@
+[
+  {
+    "station_id": "IMD-LEH-01",
+    "station_name": "Leh High-Altitude Meteorological Observatory",
+    "observation_time": "2026-09-19T02:00:00Z",
+    "temperature_c": -6.4,
+    "wind_speed_kmh": 45.2,
+    "wind_direction": "WNW",
+    "visibility_meters": 450,
+    "rainfall_mm": 0.0,
+    "severe_warning_level": "Orange Alert — Dense Fog & Severe Cloud Cover",
+    "weather_condition": "Dense Cirrostratus cloud obscuring optical Earth observation, optical satellite sensors degraded; radar sensors operational.",
+    "detail": "IMD High-Altitude warning: severe cloud cover and low optical visibility (<500m) over Eastern Ladakh sector. Synthetic Aperture Radar (Sentinel-1) is the primary viable sensor.",
+    "sector": "NORTHERN_LAC_LADAKH"
+  },
+  {
+    "station_id": "IMD-KUTCH-04",
+    "station_name": "Naliya / Sir Creek Coastal Weather Radar",
+    "observation_time": "2026-09-19T06:00:00Z",
+    "temperature_c": 31.8,
+    "wind_speed_kmh": 28.0,
+    "wind_direction": "SW",
+    "visibility_meters": 2200,
+    "rainfall_mm": 4.2,
+    "severe_warning_level": "Yellow Advisory — Rough Sea & Coastal Squall",
+    "weather_condition": "Coastal squalls and sea-state moderate-rough (wave height 2.5m). Small craft advisory active.",
+    "detail": "IMD Coastal bulletin: rough sea conditions along Sir Creek / Kutch coast creating degraded visual surveillance environment.",
+    "sector": "WESTERN_BORDER_SIR_CREEK"
+  },
+  {
+    "station_id": "IMD-PORTBLAIR-01",
+    "station_name": "Port Blair Doppler Weather Radar",
+    "observation_time": "2026-09-19T06:30:00Z",
+    "temperature_c": 28.5,
+    "wind_speed_kmh": 32.0,
+    "wind_direction": "SSE",
+    "visibility_meters": 3500,
+    "rainfall_mm": 18.0,
+    "severe_warning_level": "Sea-State Bulletin — Andaman Monsoon Squall",
+    "weather_condition": "Heavy convective rainbands across Andaman shipping channels.",
+    "detail": "IMD Doppler radar: localized heavy squalls around Andaman archipelago, providing opportunistic masking for dark vessel transit.",
+    "sector": "ANDAMAN_NICOBAR_EEZ"
+  }
+]
