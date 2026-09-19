@@ -1,20 +1,19 @@
 ---
 name: runbook
-description: >-
-  Retrieve prioritized Incident Response containment and remediation runbooks
-  for a ThreatFusion incident
+description: Retrieve prioritized, phased incident response runbooks with explicit analyst safety controls
 metadata:
   user-invocable: true
   disable-model-invocation: true
-  argument-hint: <incident-id>
+  argument-hint: <candidate-or-incident-id>
 ---
 
 # /runbook
 
-Retrieve the prioritized Incident Response containment, eradication, and detection engineering runbook for an incident.
+Retrieve prioritized Incident Response containment, eradication, and detection engineering runbooks using `get_remediation_runbook(incident_id=...)`.
 
-Workflow:
-1. Call `get_remediation_runbook` for the requested incident ID.
-2. Group recommended actions by phase (Containment, Eradication, Detection Engineering).
-3. Clearly highlight Immediate vs. High priority actions.
-4. Specify the target systems (Firewall, IAM, Endpoint Policy, Email Security).
+## Output Structure
+1. **OPERATIONAL SAFETY BANNER:** Actions require analyst authorization; no autonomous containment.
+2. **PHASE 1: INVESTIGATION & TELEMETRY GATHERING** (Immediate, Non-disruptive)
+3. **PHASE 2: CONTAINMENT** (Immediate/High · Requires Authorization)
+4. **PHASE 3: ERADICATION** (High · Requires Authorization)
+5. **PHASE 4: DETECTION ENGINEERING** (Medium · Proactive hunting queries & rules)
