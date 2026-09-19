@@ -6,25 +6,72 @@ hand the grounded facts to IBM Bob when narrative assistance is useful.
 """
 from __future__ import annotations
 
+import json
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from pydantic import BaseModel
 
 from src.threatfusion.engine import ENGINE_VERSION, analyze, bluf, clear_context_cache, promoted_incidents, remediation_runbook
 
 logger = logging.getLogger("threatfusion")
 ROOT = Path(__file__).resolve().parents[1]
+FEEDBACK_FILE = ROOT / "src" / "data" / "feedback.json"
+
 app = FastAPI(title="ThreatFusion - Analyst Workspace", version=ENGINE_VERSION)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+# ── In-memory live alert store (cleared on restart) ──────────────────────────
+_live_alerts: list[dict[str, Any]] = []
+_live_counter: int = 0
+
+
+def _load_feedback() -> dict[str, Any]:
+    """Load feedback from disk; return empty dict if file missing."""
+    try:
+        if FEEDBACK_FILE.exists():
+            with FEEDBACK_FILE.open(encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+
+def _save_feedback(data: dict[str, Any]) -> None:
+    FEEDBACK_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with FEEDBACK_FILE.open("w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+
+def _analyze_with_live(root: Path) -> dict[str, Any]:
+    """Run analysis merging demo data with any live-ingested alerts."""
+    result = analyze(root)
+    if _live_alerts:
+        result = dict(result)
+        result["records"] = result["records"] + _live_alerts
+        # Re-run full analysis on merged dataset
+        from src.threatfusion.engine import normalize, candidate_clusters, score_cluster, promoted_incidents as _pi
+        techniques = result["techniques"]
+        edges = result["edges"]
+        assets = result["assets"]
+        norm = [normalize(r) for r in result["records"]]
+        clusters = candidate_clusters(norm)
+        incidents = [score_cluster(c, techniques, edges, assets) for c in clusters]
+        incidents.sort(key=lambda x: (-int(x["promotable"]), -x["priority_score"]))
+        result["incidents"] = incidents
+        result["candidate_clusters"] = clusters
+    return result
 
 INDEX = r'''<!doctype html>
 <html lang="en">
@@ -410,6 +457,40 @@ INDEX = r'''<!doctype html>
     .loading-pulse { animation: pulse 1.4s ease-in-out infinite; }
     @keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:1} }
 
+    /* ── FEEDBACK BADGES ── */
+    .fb-badge { display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:800; }
+    .fb-confirmed  { background:rgba(16,185,129,.18);color:#10b981;border:1px solid rgba(16,185,129,.35); }
+    .fb-false_positive { background:rgba(244,63,94,.18);color:#f43f5e;border:1px solid rgba(244,63,94,.35); }
+    .fb-investigating  { background:rgba(251,191,36,.18);color:#fbbf24;border:1px solid rgba(251,191,36,.35); }
+
+    /* ── LIVE INGEST PANEL ── */
+    .ingest-form { display:grid;gap:12px;margin-top:12px; }
+    .ingest-label { font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--cyan);margin-bottom:4px;display:block; }
+    .ingest-textarea { width:100%;min-height:180px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border2);border-radius:10px;color:var(--text);font-family:ui-monospace,monospace;font-size:12px;line-height:1.6;resize:vertical;transition:border-color .2s; }
+    .ingest-textarea:focus { outline:none;border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,.1); }
+    .ingest-submit { padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700;background:linear-gradient(135deg,var(--cyan),#0098cc);color:#000;border:none;cursor:pointer;transition:opacity .2s; }
+    .ingest-submit:hover { opacity:.85; }
+    .ingest-result { padding:12px 14px;border-radius:10px;font-size:13px;margin-top:8px;display:none; }
+    .ingest-result.ok  { background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.3);color:var(--green); }
+    .ingest-result.err { background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);color:var(--red); }
+    .live-log { max-height:260px;overflow-y:auto;display:grid;gap:6px;margin-top:10px; }
+    .live-log-item { padding:8px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;font-size:12px; }
+    .live-log-id { font-family:ui-monospace,monospace;color:var(--cyan);font-weight:700; }
+    .live-log-meta { color:var(--muted);font-size:11px;margin-top:2px; }
+
+    /* ── FEEDBACK PANEL ── */
+    .fb-list { display:grid;gap:10px;margin-top:12px; }
+    .fb-row { display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:10px; }
+    .fb-row-id { font-family:ui-monospace,monospace;font-size:12px;font-weight:700;color:var(--cyan);flex:1; }
+    .fb-btns { display:flex;gap:6px; }
+    .fb-btn { padding:5px 12px;border-radius:6px;font-size:11px;font-weight:800;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all .18s; }
+    .fb-btn:hover { border-color:var(--cyan);color:var(--cyan); }
+    .fb-btn.active-confirmed   { background:rgba(16,185,129,.2);border-color:var(--green);color:var(--green); }
+    .fb-btn.active-false_positive { background:rgba(244,63,94,.2);border-color:var(--red);color:var(--red); }
+    .fb-btn.active-investigating  { background:rgba(251,191,36,.2);border-color:var(--amber);color:var(--amber); }
+    .fb-note { font-size:11px;color:var(--muted);margin-top:4px; }
+    .fb-ts { font-size:10px;color:var(--faint); }
+
     /* ── RESPONSIVE ── */
     @media (max-width: 900px) {
       .layout { grid-template-columns: 1fr; }
@@ -525,6 +606,12 @@ INDEX = r'''<!doctype html>
           </button>
           <button class="tab" id="tab-bob"        role="tab" aria-controls="panel-bob"       aria-selected="false" data-tab="bob">
             <span class="tab-icon">🤖</span> IBM Bob Handoff
+          </button>
+          <button class="tab" id="tab-ingest"     role="tab" aria-controls="panel-ingest"    aria-selected="false" data-tab="ingest">
+            <span class="tab-icon">⚡</span> Live Ingest
+          </button>
+          <button class="tab" id="tab-feedback"   role="tab" aria-controls="panel-feedback"  aria-selected="false" data-tab="feedback">
+            <span class="tab-icon">💬</span> Analyst Feedback
           </button>
         </nav>
 
@@ -665,6 +752,75 @@ INDEX = r'''<!doctype html>
           </div>
         </section>
 
+        <!-- ── PANEL: LIVE INGEST ── -->
+        <section id="panel-ingest" class="panel" role="tabpanel" aria-labelledby="tab-ingest">
+          <div class="split">
+            <article class="card">
+              <p class="eyebrow">Live alert ingestion</p>
+              <h2>⚡ Ingest a new alert</h2>
+              <p style="font-size:13px;color:var(--muted);margin-bottom:4px;">Paste a JSON alert record below. The engine will re-run with your new record merged in and update the case queue live — no restart needed.</p>
+              <div class="ingest-form">
+                <div>
+                  <span class="ingest-label">Alert JSON</span>
+                  <textarea id="ingest-input" class="ingest-textarea" spellcheck="false" placeholder='{
+  "source": "siem",
+  "format": "json",
+  "timestamp": "2026-09-16T10:00:00Z",
+  "event_type": "email_attachment_opened",
+  "user": "newuser",
+  "host": "NEW-HOST01",
+  "detail": "winword.exe opened suspicious attachment"
+}'></textarea>
+                </div>
+                <div>
+                  <button class="ingest-submit" id="ingest-btn">⚡ Ingest Alert</button>
+                </div>
+                <div id="ingest-result" class="ingest-result"></div>
+              </div>
+            </article>
+            <article class="card">
+              <p class="eyebrow">Ingested this session</p>
+              <h2>Live alert log</h2>
+              <p style="font-size:13px;color:var(--muted);margin-bottom:4px;">Alerts ingested since the server started. These are merged with the demo dataset and re-analysed immediately.</p>
+              <div id="live-log" class="live-log"><div class="empty">No alerts ingested yet this session.</div></div>
+            </article>
+          </div>
+        </section>
+
+        <!-- ── PANEL: ANALYST FEEDBACK ── -->
+        <section id="panel-feedback" class="panel" role="tabpanel" aria-labelledby="tab-feedback">
+          <div class="split">
+            <article class="card">
+              <p class="eyebrow">Analyst feedback loop</p>
+              <h2>💬 Mark case outcomes</h2>
+              <p style="font-size:13px;color:var(--muted);margin-bottom:4px;">Your feedback is saved to disk and used in future scoring. False positive feedback lowers confidence on similar clusters. Confirmed feedback validates the promotion decision.</p>
+              <div id="fb-list" class="fb-list"><div class="empty loading-pulse">Loading cases…</div></div>
+            </article>
+            <article class="card">
+              <p class="eyebrow">How feedback works</p>
+              <h2>The learning loop</h2>
+              <div style="display:grid;gap:12px;margin-top:8px;">
+                <div style="padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;">
+                  <div style="font-size:12px;font-weight:800;color:var(--green);margin-bottom:4px;">✅ Confirmed</div>
+                  <div style="font-size:12px;color:var(--text2);">You verified this is a real incident. The engine notes this cluster as a true positive for future reference.</div>
+                </div>
+                <div style="padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;">
+                  <div style="font-size:12px;font-weight:800;color:var(--red);margin-bottom:4px;">❌ False Positive</div>
+                  <div style="font-size:12px;color:var(--text2);">You investigated and found this is not a real attack. A confidence penalty is applied to this cluster. Future similar clusters score lower.</div>
+                </div>
+                <div style="padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;">
+                  <div style="font-size:12px;font-weight:800;color:var(--amber);margin-bottom:4px;">🔍 Investigating</div>
+                  <div style="font-size:12px;color:var(--text2);">You are actively working this case. Marks it as in-progress so other analysts know it is being handled.</div>
+                </div>
+                <div style="padding:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;">
+                  <div style="font-size:12px;font-weight:800;color:var(--cyan);margin-bottom:4px;">📁 Feedback persistence</div>
+                  <div style="font-size:12px;color:var(--text2);">All feedback is saved to <code style="background:var(--border);padding:1px 5px;border-radius:3px;">src/data/feedback.json</code> and survives server restarts.</div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
       </main>
     </div>
   </div>
@@ -673,6 +829,7 @@ INDEX = r'''<!doctype html>
     let summary = null;
     let selected = null;
     let activeSource = 'all';
+    let feedbackStore = {};
 
     const SOURCE_LABELS = {
       siem: 'SIEM',
@@ -710,6 +867,15 @@ INDEX = r'''<!doctype html>
     function switchTab(next) {
       document.querySelectorAll('[role="tab"]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === next)));
       document.querySelectorAll('[role="tabpanel"]').forEach(p => p.classList.toggle('active', p.id === 'panel-' + next));
+      if (next === 'feedback') renderFeedbackPanel();
+    }
+
+    function fbBadgeHtml(incId) {
+      const v = feedbackStore[incId];
+      if (!v) return '';
+      const map = { confirmed: ['✅','fb-confirmed','Confirmed'], false_positive: ['❌','fb-false_positive','False +ve'], investigating: ['🔍','fb-investigating','Investigating'] };
+      const [icon, cls, label] = map[v] || ['','',''];
+      return icon ? `<span class="fb-badge ${cls}">${icon} ${label}</span>` : '';
     }
 
     function renderQueue() {
@@ -724,6 +890,7 @@ INDEX = r'''<!doctype html>
           <div class="case-row">
             <span class="case-id">${esc(inc.id)}</span>
             <span class="priority ${inc.priority.toLowerCase()}">${esc(inc.priority)}</span>
+            ${fbBadgeHtml(inc.id)}
           </div>
           <div class="case-techniques">${esc(techNames) || '—'}</div>
           <div class="case-foot">
@@ -738,6 +905,12 @@ INDEX = r'''<!doctype html>
 
     async function boot() {
       try {
+        // Load feedback store first so badges render with initial queue
+        try {
+          const fb = await fetch('/api/feedback');
+          if (fb.ok) feedbackStore = await fb.json();
+        } catch (_) {}
+
         const res = await fetch('/api/summary');
         if (!res.ok) throw new Error('Unable to load analysis');
         summary = await res.json();
@@ -948,6 +1121,86 @@ INDEX = r'''<!doctype html>
       }
     }
 
+    // ── LIVE INGEST ──
+    async function submitAlert() {
+      const textarea = document.getElementById('ingest-input');
+      const raw = textarea.value.trim();
+      if (!raw) { setStatus('Paste a JSON alert first.', true); return; }
+      let payload;
+      try { payload = JSON.parse(raw); } catch (e) { setStatus('Invalid JSON: ' + e.message, true); return; }
+      try {
+        const res = await fetch('/api/ingest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ alert: payload })
+        });
+        const data = await res.json();
+        if (!res.ok) { setStatus(data.detail || 'Ingest failed.', true); return; }
+        setStatus(`Alert accepted · ID: ${data.id} · Live total: ${data.live_total}`);
+        textarea.value = '';
+        // Refresh queue with merged data
+        const sumRes = await fetch('/api/summary');
+        if (sumRes.ok) {
+          summary = await sumRes.json();
+          document.getElementById('f-raw').textContent = summary.metrics.raw_records;
+          document.getElementById('f-cand').textContent = summary.metrics.candidate_clusters;
+          document.getElementById('f-prom').textContent = summary.metrics.promoted_incidents;
+          document.getElementById('c-raw').textContent = summary.metrics.raw_records;
+          renderQueue();
+        }
+        // Append to live log
+        const logEl = document.getElementById('live-log');
+        const entry = document.createElement('div');
+        entry.className = 'live-log-entry';
+        entry.innerHTML = `<span class="live-log-id">${esc(data.id)}</span> ingested at <span class="live-log-ts">${new Date().toISOString().slice(11,19)} UTC</span>`;
+        logEl.prepend(entry);
+      } catch (e) {
+        setStatus('Ingest error: ' + e.message, true);
+      }
+    }
+
+    // ── ANALYST FEEDBACK ──
+    async function renderFeedbackPanel() {
+      const listEl = document.getElementById('feedback-list');
+      if (!summary) return;
+      try {
+        const res = await fetch('/api/feedback');
+        if (res.ok) feedbackStore = await res.json();
+      } catch (_) {}
+      listEl.innerHTML = summary.incidents.map(inc => {
+        const current = feedbackStore[inc.id] || null;
+        const btns = ['confirmed','false_positive','investigating'].map(v => {
+          const labels = { confirmed: '✅ Confirm', false_positive: '❌ False Positive', investigating: '🔍 Investigating' };
+          const active = current === v ? `active-${v}` : '';
+          return `<button class="fb-btn ${active}" data-inc-id="${esc(inc.id)}" data-verdict="${v}">${labels[v]}</button>`;
+        }).join('');
+        return `<div class="fb-row">
+          <div class="fb-inc-id">${esc(inc.id)}</div>
+          <div class="fb-priority ${inc.priority.toLowerCase()}">${esc(inc.priority)} · ${esc(inc.confidence)}% conf</div>
+          <div class="fb-actions">${btns}</div>
+        </div>`;
+      }).join('');
+      listEl.querySelectorAll('[data-verdict]').forEach(b =>
+        b.addEventListener('click', () => submitFeedback(b.dataset.incId, b.dataset.verdict)));
+    }
+
+    async function submitFeedback(incidentId, verdict) {
+      try {
+        const res = await fetch('/api/feedback', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ incident_id: incidentId, verdict })
+        });
+        if (!res.ok) { setStatus('Feedback save failed.', true); return; }
+        feedbackStore = await res.json();
+        setStatus(`Feedback recorded: ${incidentId} → ${verdict.replace('_', ' ')}`);
+        renderQueue();
+        renderFeedbackPanel();
+      } catch (e) {
+        setStatus('Feedback error: ' + e.message, true);
+      }
+    }
+
     // ── SEARCH ──
     async function runSearch() {
       const q = document.getElementById('search-input').value.trim();
@@ -989,6 +1242,7 @@ INDEX = r'''<!doctype html>
     document.querySelectorAll('[role="tab"]').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
     document.getElementById('copy-brief').addEventListener('click', () => copyText(briefText(), 'Commander brief copied.'));
     document.getElementById('export-brief').addEventListener('click', exportBrief);
+    document.getElementById('ingest-btn').addEventListener('click', submitAlert);
 
     boot();
   </script>
@@ -996,8 +1250,30 @@ INDEX = r'''<!doctype html>
 </html>'''
 
 
+class _AlertIngest(BaseModel):
+    alert: dict[str, Any]
+
+
+class _FeedbackSubmit(BaseModel):
+    incident_id: str
+    verdict: str
+
+
 def _with_presentation_fields(incident: dict) -> dict:
     """Add derived read-only presentation fields without changing engine state."""
+    feedback = _load_feedback()
+    verdict = feedback.get(incident["id"])
+    if verdict == "false_positive":
+        incident = dict(incident)
+        incident["confidence"] = max(0, incident["confidence"] - 15)
+        incident["feedback_verdict"] = "false_positive"
+    elif verdict == "confirmed":
+        incident = dict(incident)
+        incident["feedback_verdict"] = "confirmed"
+        incident["feedback_verified"] = True
+    elif verdict == "investigating":
+        incident = dict(incident)
+        incident["feedback_verdict"] = "investigating"
     incident["bluf"] = bluf(incident)
     incident["runbook"] = remediation_runbook(incident)
     return incident
@@ -1013,15 +1289,47 @@ def healthz() -> dict:
     return {"status": "ok", "service": "threatfusion", "version": app.version}
 
 
+@app.post("/api/ingest")
+def ingest_alert(body: _AlertIngest) -> dict:
+    global _live_alerts, _live_counter
+    alert = body.alert
+    if "_id" not in alert:
+        _live_counter += 1
+        alert = dict(alert)
+        alert["_id"] = f"LIVE-{_live_counter:04d}"
+    if "timestamp" not in alert:
+        alert["timestamp"] = datetime.now(timezone.utc).isoformat()
+    _live_alerts.append(alert)
+    return {"accepted": True, "id": alert["_id"], "live_total": len(_live_alerts)}
+
+
+@app.get("/api/feedback")
+def get_feedback() -> dict:
+    return _load_feedback()
+
+
+@app.post("/api/feedback")
+def post_feedback(body: _FeedbackSubmit) -> dict:
+    allowed = {"confirmed", "false_positive", "investigating"}
+    if body.verdict not in allowed:
+        raise HTTPException(status_code=422, detail=f"verdict must be one of {allowed}")
+    store = _load_feedback()
+    store[body.incident_id] = body.verdict
+    _save_feedback(store)
+    return store
+
+
 @app.get("/api/summary")
 def summary() -> dict:
     try:
-        analysis = analyze(ROOT)
+        analysis = _analyze_with_live(ROOT)
     except Exception as exc:
         logger.exception("Analysis failed")
         raise HTTPException(status_code=500, detail=f"Analysis error: {exc}") from exc
     promoted = [_with_presentation_fields(incident) for incident in promoted_incidents(analysis)]
-    raw_count = len(analysis["records"])
+    # raw_records counts only the base demo file records (live alerts are separate)
+    base_analysis = analyze(ROOT)
+    raw_count = len(base_analysis["records"])
     candidate_count = len(analysis["incidents"])
     return {
         "metadata": analysis["metadata"],
@@ -1030,6 +1338,7 @@ def summary() -> dict:
             "candidate_clusters": candidate_count,
             "promoted_incidents": len(promoted),
             "candidate_compression": round(100 * (1 - candidate_count / max(1, raw_count)), 1),
+            "live_alerts": len(_live_alerts),
         },
         "incidents": promoted[:12],
     }
@@ -1038,7 +1347,7 @@ def summary() -> dict:
 @app.get("/api/incidents/{incident_id}")
 def incident(incident_id: str) -> dict:
     try:
-        analysis = analyze(ROOT)
+        analysis = _analyze_with_live(ROOT)
     except Exception as exc:
         logger.exception("Analysis failed")
         raise HTTPException(status_code=500, detail=f"Analysis error: {exc}") from exc
