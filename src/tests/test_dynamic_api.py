@@ -132,3 +132,24 @@ def test_bob_ask_endpoint():
         assert data["incident_id"] == inc_id
         assert len(data["response"]) > 20
 
+
+def test_ingest_all_corpus_data():
+    # Ingest full threat and multi-domain corpus
+    res = client.post("/api/ingest/corpus", json={"mode": "all"})
+    assert res.status_code == 200
+    data = res.json()
+    assert data["status"] == "ok"
+    assert data["total_alerts"] >= 110
+    assert data["stats"]["total_new_ingested"] > 0
+    assert data["stats"]["opensky_airspace_ingested"] > 0
+    assert data["stats"]["maritime_ais_ingested"] > 0
+    assert data["stats"]["satellite_eo_ingested"] > 0
+    assert data["stats"]["thermal_firms_ingested"] > 0
+    assert data["stats"]["weather_imd_ingested"] > 0
+
+    # Reset back to demo baseline
+    reset_res = client.post("/api/reset")
+    assert reset_res.status_code == 200
+    assert reset_res.json()["raw_records"] == 62
+
+

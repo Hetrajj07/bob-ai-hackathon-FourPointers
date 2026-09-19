@@ -523,6 +523,14 @@ INDEX = r'''<!doctype html>
     .src-endpoint { background: rgba(129, 140, 248, 0.12); color: #a5b4fc; border: 1px solid rgba(129, 140, 248, 0.3); }
     .src-network_sensor { background: rgba(20, 184, 166, 0.12); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.3); }
     .src-threat_intel_report { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .src-opensky_airspace, .src-airspace { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); }
+    .src-maritime_ais, .src-maritime { background: rgba(45, 212, 191, 0.15); color: #2dd4bf; border: 1px solid rgba(45, 212, 191, 0.35); }
+    .src-copernicus_sentinel, .src-satellite_eo { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); }
+    .src-nasa_firms, .src-thermal_ir { background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.35); }
+    .src-imd_weather, .src-weather_env { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); }
+    .src-isro_bhuvan, .src-geospatial_infra { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
+    .src-emergency_usgs, .src-geophysical { background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.35); }
+    .src-satellite_sensor, .src-cyber_c2 { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.35); }
 
     /* ── TIMELINE ── */
     .timeline { position: relative; display: grid; gap: 0; margin-top: 10px; }
@@ -1129,13 +1137,45 @@ INDEX = r'''<!doctype html>
       siem: 'SIEM',
       endpoint: 'Endpoint',
       network_sensor: 'Network Sensor',
-      threat_intel_report: 'Threat Intel'
+      threat_intel_report: 'Threat Intel',
+      opensky_airspace: '✈️ OpenSky Airspace',
+      airspace: '✈️ Airspace',
+      maritime_ais: '🚢 NOAA Maritime AIS',
+      maritime: '🚢 Maritime',
+      copernicus_sentinel: '🛰️ Copernicus Sentinel',
+      satellite_eo: '🛰️ Satellite EO',
+      nasa_firms: '🔥 NASA FIRMS',
+      thermal_ir: '🔥 Thermal IR',
+      imd_weather: '🌦️ IMD Weather',
+      weather_env: '🌦️ Meteorology',
+      isro_bhuvan: '🇮🇳 ISRO Bhuvan',
+      geospatial_infra: '🇮🇳 Critical Infra',
+      emergency_usgs: '🌍 USGS / CEMS',
+      geophysical: '🌍 Geophysical',
+      satellite_sensor: '🛰️ SPARTA Satellite',
+      cyber_c2: '💻 Cyber / Ground C2',
     };
     const SOURCE_CLASS = {
       siem: 'src-siem',
       endpoint: 'src-endpoint',
       network_sensor: 'src-network_sensor',
-      threat_intel_report: 'src-threat_intel_report'
+      threat_intel_report: 'src-threat_intel_report',
+      opensky_airspace: 'src-opensky_airspace',
+      airspace: 'src-opensky_airspace',
+      maritime_ais: 'src-maritime_ais',
+      maritime: 'src-maritime_ais',
+      copernicus_sentinel: 'src-copernicus_sentinel',
+      satellite_eo: 'src-copernicus_sentinel',
+      nasa_firms: 'src-nasa_firms',
+      thermal_ir: 'src-nasa_firms',
+      imd_weather: 'src-imd_weather',
+      weather_env: 'src-imd_weather',
+      isro_bhuvan: 'src-isro_bhuvan',
+      geospatial_infra: 'src-isro_bhuvan',
+      emergency_usgs: 'src-emergency_usgs',
+      geophysical: 'src-emergency_usgs',
+      satellite_sensor: 'src-satellite_sensor',
+      cyber_c2: 'src-satellite_sensor',
     };
     const CHECK_LABELS = {
       minimum_behavior_evidence: ['Multiple behavior observations', 'At least two ATT&CK-backed behavior observations were found.'],
@@ -1519,6 +1559,13 @@ INDEX = r'''<!doctype html>
           (data.total_matches > data.matches.length
             ? `<div class="search-no-results">Showing ${data.matches.length} of ${data.total_matches} matches</div>`
             : '');
+        resultsEl.querySelectorAll('.search-result-item').forEach(item => {
+          item.addEventListener('click', () => {
+            const recId = item.dataset.recordId;
+            resultsEl.classList.remove('open');
+            openBobModal(recId, 'investigate');
+          });
+        });
       } catch (e) {
         resultsEl.innerHTML = `<div class="search-no-results">Search error: ${esc(e.message)}</div>`;
       }
@@ -2486,200 +2533,13 @@ def ingest_corpus(payload: dict | None = None) -> dict:
         include_otrf=True,
         include_cicids=True,
         include_sparta_satellite=True,
-        root_dir=ROOT,
-    )
-    clear_context_cache()
-    analysis = get_dynamic_analysis()
-    promoted = promoted_incidents(analysis)
-    return {
-        "status": "ok",
-        "mode": mode,
-        "stats": stats,
-        "total_alerts": len(analysis["records"]),
-        "candidate_clusters": len(analysis["incidents"]),
-        "promoted_incidents": len(promoted),
-    }
-
-@app.post("/api/ingest/cicids")
-def ingest_cicids(payload: dict | list[dict]) -> dict:
-    """Ingest real network flow telemetry in CIC-IDS2017 format."""
-    flows = payload if isinstance(payload, list) else [payload]
-    normalized = []
-    for fl in flows:
-        norm = normalize_cicids(fl)
-        enriched = enrich_record(norm, root=ROOT)
-        normalized.append(enriched)
-    count = insert_alerts_bulk(normalized)
-    clear_context_cache()
-    analysis = get_dynamic_analysis()
-    return {
-        "status": "ok",
-        "format": "CIC-IDS2017 Flow Telemetry",
-        "inserted_count": count,
-        "total_alerts": len(analysis["records"]),
-        "promoted_incidents": len(promoted_incidents(analysis)),
-    }
-
-
-@app.get("/api/threatfox/lookup")
-def threatfox_lookup(indicator: str = Query(...)) -> dict:
-    """Query local curated ThreatFox / abuse.ch CTI feed for malware IOC metadata."""
-    match = lookup_threatfox(indicator, root=ROOT)
-    if not match:
-        return {"found": False, "indicator": indicator, "message": "No match in curated ThreatFox database"}
-    return {"found": True, "indicator": indicator, "threat": match}
-
-
-@app.get("/api/cisa-kev/lookup")
-def cisa_kev_lookup(cve: str = Query(...)) -> dict:
-    """Query CISA Known Exploited Vulnerabilities catalog."""
-    match = check_cisa_kev(cve, root=ROOT)
-    if not match:
-        return {"found": False, "cve": cve, "message": "Not listed in CISA KEV catalog"}
-    return {"found": True, "cve": cve, "vulnerability": match}
-
-
-@app.post("/api/simulate-feed")
-def simulate_feed(payload: dict) -> dict:
-    """Simulate incoming multi-source attack feeds (Satellite sensor, cyber sensors, SIEM, OTRF, CIC-IDS)."""
-    scenario = payload.get("scenario", "satellite_ground_breach")
-    from datetime import datetime, timezone
-
-    now_iso = datetime.now(timezone.utc).isoformat()
-
-    if scenario in ("satellite_ground_breach", "sparta_satellite_compromise"):
-        sat_file = ROOT / "src" / "data" / "space" / "satellite_demo.json"
-        if sat_file.exists():
-            with sat_file.open(encoding="utf-8") as f:
-                sim_records = [enrich_record(r, root=ROOT) for r in json.load(f)]
-        else:
-            sim_records = [
-                {
-                    "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-1",
-                    "timestamp": now_iso,
-                    "source": "satellite_sensor",
-                    "event_type": "downlink_telemetry_anomaly",
-                    "host": "SATCOM-GW02",
-                    "src_ip": "198.51.100.45",
-                    "dst_ip": "10.40.2.1",
-                    "detail": "SATCOM ground terminal downlink telemetry anomaly: unexpected telemetry relay command received.",
-                },
-                {
-                    "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-2",
-                    "timestamp": now_iso,
-                    "source": "network_sensor",
-                    "event_type": "lateral_remote_session",
-                    "protocol": "RDP",
-                    "dst_port": 3389,
-                    "src_host": "SATCOM-GW02",
-                    "dst_host": "SAT-GROUND-01",
-                    "detail": "Unauthorized lateral Remote Desktop Protocol session initiated from satellite gateway to satellite ground station.",
-                },
-                {
-                    "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-3",
-                    "timestamp": now_iso,
-                    "source": "endpoint",
-                    "event_type": "process_injection",
-                    "host": "SAT-GROUND-01",
-                    "process": "powershell.exe",
-                    "parent_process": "winword.exe",
-                    "cmdline": "powershell.exe -enc JABzAGEAdAA9...",
-                    "detail": "Encoded PowerShell execution launched by document process targeting satellite command bus.",
-                },
-            ]
-    elif scenario == "otrf_attack_chain":
-        otrf_file = ROOT / "src" / "data" / "real" / "otrf_sample.json"
-        if otrf_file.exists():
-            with otrf_file.open(encoding="utf-8") as f:
-                sim_records = [enrich_record(normalize_otrf(ev), root=ROOT) for ev in json.load(f)]
-        else:
-            sim_records = []
-    elif scenario == "cicids_network_flood":
-        cicids_file = ROOT / "src" / "data" / "real" / "cicids_sample.json"
-        if cicids_file.exists():
-            with cicids_file.open(encoding="utf-8") as f:
-                sim_records = [enrich_record(normalize_cicids(fl), root=ROOT) for fl in json.load(f)]
-        else:
-            sim_records = []
-    elif scenario == "benign_admin_noise":
-        sim_records = [
-            {
-                "_id": f"SIM-BENIGN-{int(datetime.now().timestamp())}-1",
-                "timestamp": now_iso,
-                "source": "endpoint",
-                "event_type": "antivirus_scan_clean",
-                "host": "FIN-LT22",
-                "user": "corporate_user",
-                "detail": "Daily scheduled antivirus scan completed with zero threats identified.",
-            },
-            {
-                "_id": f"SIM-BENIGN-{int(datetime.now().timestamp())}-2",
-                "timestamp": now_iso,
-                "source": "endpoint",
-                "event_type": "process_execution",
-                "host": "FIN-LT22",
-                "process": "powershell.exe",
-                "parent_process": "explorer.exe",
-                "detail": "Interactive PowerShell session launched by known admin without suspicious parameters.",
-            },
-        ]
-    elif scenario in ("historical_threats", "historical_ghoststeal_campaign"):
-        hist_file = ROOT / "src" / "data" / "historical" / "historical_threats.json"
-        if hist_file.exists():
-            with hist_file.open(encoding="utf-8") as f:
-                sim_records = [enrich_record(r, root=ROOT) for r in json.load(f)]
-        else:
-            sim_records = []
-    elif scenario in ("recent_threats", "recent_ransomware_predeployment"):
-        rec_file = ROOT / "src" / "data" / "recent" / "recent_threats.json"
-        if rec_file.exists():
-            with rec_file.open(encoding="utf-8") as f:
-                sim_records = [enrich_record(r, root=ROOT) for r in json.load(f)]
-        else:
-            sim_records = []
-    elif scenario in ("all_threats", "full_threat_corpus"):
-        from src.threatfusion.db import ingest_corpus_data
-        stats = ingest_corpus_data(include_historical=True, include_recent=True, root_dir=ROOT)
-        clear_context_cache()
-        analysis = get_dynamic_analysis()
-        promoted = promoted_incidents(analysis)
-        return {
-            "status": "ok",
-            "scenario": scenario,
-            "inserted_records": stats["total_new_ingested"],
-            "total_alerts": len(analysis["records"]),
-            "promoted_incidents": len(promoted),
-            "stats": stats,
-        }
-    else:
-        raise HTTPException(status_code=400, detail=f"Unknown scenario preset: {scenario}")
-
-    inserted = insert_alerts_bulk(sim_records)
-    clear_context_cache()
-    analysis = get_dynamic_analysis()
-    promoted = promoted_incidents(analysis)
-    return {
-        "status": "ok",
-        "scenario": scenario,
-        "inserted_records": inserted,
-        "total_alerts": len(analysis["records"]),
-        "promoted_incidents": len(promoted),
-    }
-
-
-@app.post("/api/ingest/corpus")
-def ingest_corpus(payload: dict | None = None) -> dict:
-    """Ingest historical archive and/or recent multi-source threats into SQLite database."""
-    mode = (payload or {}).get("mode", "all")
-    from src.threatfusion.db import ingest_corpus_data
-    include_hist = mode in ("all", "historical")
-    include_rec = mode in ("all", "recent")
-    stats = ingest_corpus_data(
-        include_historical=include_hist,
-        include_recent=include_rec,
-        include_otrf=True,
-        include_cicids=True,
-        include_sparta_satellite=True,
+        include_opensky=True,
+        include_maritime_ais=True,
+        include_satellite_eo=True,
+        include_thermal_firms=True,
+        include_weather_imd=True,
+        include_bhuvan_geospatial=True,
+        include_emergency_usgs=True,
         root_dir=ROOT,
     )
     clear_context_cache()
