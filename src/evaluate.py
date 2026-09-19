@@ -91,26 +91,61 @@ def evaluate():
     bl_attack_recovered = sum(1 for s in scenario_results if s["type"] == "attack" and s["recovered_by_baseline"])
     bl_benign_fp = sum(1 for s in scenario_results if s["type"] == "benign" and s["recovered_by_baseline"])
     total_attack = len(attack_keys)
+    total_benign = len(benign_keys)
+
+    # Confusion matrix & standard classification metrics
+    tp = tf_attack_promoted
+    fp = tf_benign_promoted
+    fn = total_attack - tf_attack_promoted
+    tn = total_benign - tf_benign_promoted
+    precision = round(tp / max(1, tp + fp), 3)
+    recall = round(tp / max(1, tp + fn), 3)
+    f1 = round(2 * precision * recall / max(1e-6, precision + recall), 3)
+    fpr = round(fp / max(1, fp + tn), 3)
+
+    bl_tp = bl_attack_recovered
+    bl_fp = bl_benign_fp
+    bl_fn = total_attack - bl_attack_recovered
+    bl_tn = total_benign - bl_benign_fp
+    bl_prec = round(bl_tp / max(1, bl_tp + bl_fp), 3)
+    bl_rec = round(bl_tp / max(1, bl_tp + bl_fn), 3)
+    bl_f1 = round(2 * bl_prec * bl_rec / max(1e-6, bl_prec + bl_rec), 3)
+    bl_fpr = round(bl_fp / max(1, bl_fp + bl_tn), 3)
 
     return {
         "dataset": {
             "records": len(d["records"]),
             "labeled_scenarios": len(ground_truth),
             "attack_scenarios": total_attack,
-            "benign_scenarios": len(benign_keys),
+            "benign_scenarios": total_benign,
         },
         "baseline": {
             "clusters": len(baseline),
             "attack_scenarios_recovered": bl_attack_recovered,
             "benign_scenarios_flagged": bl_benign_fp,
+            "true_positives": bl_tp,
+            "false_positives": bl_fp,
+            "false_negatives": bl_fn,
+            "true_negatives": bl_tn,
+            "precision": bl_prec,
+            "recall": bl_rec,
+            "f1_score": bl_f1,
+            "false_positive_rate": bl_fpr,
         },
         "threatfusion": {
             "candidate_hypotheses": len(enhanced_candidates),
             "promoted_incidents": len(enhanced_promoted),
-            "attack_scenarios_promoted": tf_attack_promoted,
-            "benign_scenarios_promoted": tf_benign_promoted,
-            "incident_recall": round(tf_attack_promoted / max(1, total_attack), 3),
-            "false_positive_rate": round(tf_benign_promoted / max(1, len(benign_keys)), 3),
+            "attack_scenarios_promoted": tp,
+            "benign_scenarios_promoted": fp,
+            "true_positives": tp,
+            "false_positives": fp,
+            "false_negatives": fn,
+            "true_negatives": tn,
+            "incident_recall": recall,
+            "precision": precision,
+            "recall": recall,
+            "f1_score": f1,
+            "false_positive_rate": fpr,
         },
         "scenario_breakdown": scenario_results,
         "runtime_checks": {

@@ -192,6 +192,8 @@ def tool_call(name: str, args: dict):
             "risk_factors": x["risk_factors"],
             "source_independence": x["source_independence"],
             "negative_evidence": x["negative_evidence"],
+            "frameworks_present": x.get("frameworks_present", ["MITRE ATT&CK"]),
+            "provenance_summary": x.get("provenance_summary", {}),
         }
     if name == "get_detection_gaps":
         return {

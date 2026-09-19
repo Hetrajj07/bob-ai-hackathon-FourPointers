@@ -9,7 +9,9 @@
     "sparta_id": "SPARTA-IMP-0001",
     "detail": "RF Downlink carrier jamming detected on UHF/S-band command channel with -12dB SNR drop.",
     "protocol": "SATCOM-RF",
-    "src_ip": "198.51.100.45"
+    "src_ip": "198.51.100.45",
+    "provenance_type": "synthetic",
+    "dataset_name": "SPARTA-Mapped Satellite Demonstration"
   },
   {
     "_id": "SPARTA-OBS-002",
@@ -21,7 +23,9 @@
     "sparta_id": "SPARTA-EX-0001",
     "detail": "Unauthorized command injection into satellite ground tracking relay bus targeting payload controller.",
     "src_host": "SATCOM-GW02",
-    "dst_host": "SAT-GROUND-01"
+    "dst_host": "SAT-GROUND-01",
+    "provenance_type": "synthetic",
+    "dataset_name": "SPARTA-Mapped Satellite Demonstration"
   },
   {
     "_id": "SPARTA-OBS-003",
@@ -32,6 +36,8 @@
     "segment": "space",
     "sparta_id": "SPARTA-C2-0001",
     "detail": "Rogue command uplink frame transmitted across tactical satellite network link.",
-    "src_ip": "198.51.100.45"
+    "src_ip": "198.51.100.45",
+    "provenance_type": "synthetic",
+    "dataset_name": "SPARTA-Mapped Satellite Demonstration"
   }
 ]

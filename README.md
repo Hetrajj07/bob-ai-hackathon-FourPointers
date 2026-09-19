@@ -25,18 +25,34 @@ ThreatFusion ingests heterogeneous feeds (SIEM, satellite downlink/telemetry fee
 
 ## Key Features
 
-- **Multi-Source Feed Ingestion:** Ingests and normalizes SIEM, satellite ground/downlink sensors, cyber sensors, and CTI feeds with persistent SQLite storage.
+- **Multi-Source Feed Ingestion:** Ingests and normalizes SIEM, real host/network samples, satellite downlink sensors, and CTI feeds with persistent SQLite storage.
+- **Explicit Telemetry Provenance:** Distinguishes real dataset samples (OTRF, CIC-IDS2017), curated offline snapshots (ThreatFox, CISA KEV), and synthetic demonstration feeds with visible badges.
 - **Evidence-First Correlation:** Inverted entity index with relationship-specific weights, temporal decay, and cross-source independence.
 - **False-Positive Elimination:** Strict separation between candidate clustering and incident promotion; negative evidence checks suppress routine noise.
-- **ATT&CK v19.2 Inference:** Auditable sub-technique mapping (e.g. `T1003.001` LSASS, `T1059.001` PowerShell, `T1566.001` Phishing) with full provenance.
+- **Dual Framework Mapping:** Auditable MITRE ATT&CK v19.2 sub-technique mapping (e.g. `T1003.001` LSASS, `T1059.001` PowerShell, `T1566.001` Phishing) and Aerospace SPARTA space-cyber TTP mappings (e.g. `REC-0004`, `EX-0030`).
 - **Attack-Flow Coherence:** Progression/depth/backtrack analysis ensuring multi-stage campaign validity.
 - **Structured Commander BLUFs:** Bottom Line Up Front briefings with prioritized decision recommendations.
 - **IBM Bob MCP Workflows:** Grounded `/bluf`, `/investigate`, `/explain`, and `/runbook` commands without hallucinated scores.
 
-## Demo Dataset & ATT&CK Reference
+## Telemetry & CTI Provenance Model
 
-The bundled demo contains **62 synthetic observations** spanning SIEM, satellite sensor feeds, cyber sensors, and CTI advisories. The engine produces **5 candidate hypotheses** and promotes **4** evidence-backed incidents (3× P1, 1× P2). The fifth candidate is deliberately weak/benign and is rejected by promotion checks.
-The bundled MITRE ATT&CK reference data is sourced from the **MITRE ATT&CK v19.2** release, providing structured techniques, tactics, groups, and sub-technique mappings.
+> ThreatFusion supports multiple telemetry sources through a canonical normalization layer. Public real-world host/network datasets are used as reproducible samples where appropriate; CTI can be represented through curated snapshots and/or live feeds; SPARTA provides the space-cyber reference taxonomy; satellite telemetry in the demonstration remains synthetic.
+
+| Data Domain | Source / Dataset | Provenance Type | Role in ThreatFusion |
+|---|---|---|---|
+| Host / EDR | OTRF Security Datasets (Sysmon) | `real_sample` | Captured real-world endpoint telemetry (malicious & benign) |
+| Network Sensors | CIC-IDS2017 (PCAP flows) | `real_sample` | Realistic network flow events (DDoS, Brute Force, Web) |
+| Threat Intelligence | Abuse.ch ThreatFox IOCs | `curated_snapshot` | Known malware C2/hashes for deterministic offline evaluation |
+| Vulnerability Intelligence | CISA Known Exploited Vulns (KEV) | `curated_snapshot` | Real actively exploited CVE reference metadata |
+| Space-Cyber Reference | Aerospace Corp SPARTA | `reference_tax` | Dedicated space TTP taxonomy modeled alongside ATT&CK |
+| Satellite Subsystems | Ground / TT&C Downlink Demo | `synthetic` | Realistic simulated aerospace telemetry (AOCS, bus, payload) |
+
+## Demo Dataset & Benchmark
+
+The bundled synthetic benchmark contains **62 observations** evaluated across five labeled scenarios:
+- **Baseline:** 7 clusters formed, 4 attack scenarios recovered, 1 benign false positive (Precision: 80%, Recall: 100%, FPR: 100%).
+- **ThreatFusion:** 5 candidate hypotheses, 4 promoted incidents, 0 benign false positives (Precision: 100%, Recall: 100%, FPR: 0%).
+- **Runtime Integrity:** Benchmark ground truth is isolated strictly to `src/evaluate.py` and never accessible at runtime.
 
 ## Tech Stack
 

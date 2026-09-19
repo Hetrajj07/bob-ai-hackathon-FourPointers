@@ -88,9 +88,12 @@ def normalize_otrf(event: dict[str, Any]) -> dict[str, Any]:
         "dst_port": data.get("DestinationPort"),
         "detail": detail.strip(),
         "origin": "OTRF Security Datasets",
+        "provenance_type": "real_sample",
+        "dataset_name": "OTRF Security Datasets",
     }
     if attack_hint:
         canonical["attack_id_hint"] = attack_hint
+        canonical["rule_technique_hint"] = attack_hint
     return canonical
 
 
@@ -122,7 +125,10 @@ def normalize_cicids(flow: dict[str, Any]) -> dict[str, Any]:
         "protocol": "RDP" if dst_port == 3389 else ("SSH" if dst_port == 22 else proto),
         "detail": detail,
         "label": label,
+        "dataset_label": label,
         "origin": "CIC-IDS2017 Dataset",
+        "provenance_type": "real_sample",
+        "dataset_name": "CIC-IDS2017",
     }
     return canonical
 
@@ -144,4 +150,6 @@ def auto_normalize(record: dict[str, Any]) -> dict[str, Any]:
         rec["timestamp"] = datetime.now(timezone.utc).isoformat()
     if "source" not in rec:
         rec["source"] = "unknown"
+    rec.setdefault("provenance_type", "synthetic")
+    rec.setdefault("dataset_name", "Synthetic Benchmark")
     return rec

@@ -754,17 +754,18 @@ INDEX = r'''<!doctype html>
                   Ingest dynamic threat feeds to test automated candidate clustering, MITRE ATT&amp;CK sub-technique mapping, false-positive reduction, and commander BLUF generation in real time.
                 </p>
                 <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
-                  <button id="sim-sat-btn" class="action-btn">🛰️ SPARTA Space Telemetry</button>
-                  <button id="sim-otrf-btn" class="action-btn">💻 Real OTRF Sysmon Events</button>
-                  <button id="sim-cicids-btn" class="action-btn">🌐 Real CIC-IDS2017 Flows</button>
+                  <button id="sim-sat-btn" class="action-btn">🛰️ SPARTA Satellite Feed (Synthetic Demo)</button>
+                  <button id="sim-otrf-btn" class="action-btn">💻 OTRF Sysmon Events (Real Sample)</button>
+                  <button id="sim-cicids-btn" class="action-btn">🌐 CIC-IDS2017 Flows (Real Sample)</button>
                   <button id="sim-benign-btn" class="action-btn">🛡️ Ingest Benign Routine Noise</button>
                 </div>
                 <div style="margin-top:10px;margin-bottom:16px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
-                  <p class="eyebrow" style="margin-bottom:4px;">Live CTI Verification</p>
-                  <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">ThreatFox IOC &amp; CISA KEV Query</h3>
+                  <p class="eyebrow" style="margin-bottom:4px;">CTI Verification (Curated Offline Snapshot)</p>
+                  <h3 style="font-size:13px;margin-bottom:4px;color:var(--text);">ThreatFox IOC &amp; CISA KEV Verification</h3>
+                  <p style="font-size:11px;color:var(--muted);margin-bottom:8px;">Queries local curated CTI snapshots to ensure 100% offline judging reproducibility.</p>
                   <div style="display:flex;gap:8px;">
                     <input id="cti-indicator-input" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 10px;font-size:12px;" placeholder="e.g. 185.214.66.91 or CVE-2023-34362">
-                    <button id="btn-cti-lookup" class="action-btn primary" style="font-size:12px;padding:6px 14px;">Query Feed</button>
+                    <button id="btn-cti-lookup" class="action-btn primary" style="font-size:12px;padding:6px 14px;">Query Snapshot</button>
                   </div>
                   <div id="cti-lookup-result" style="margin-top:8px;font-size:11px;display:none;"></div>
                 </div>
@@ -1018,22 +1019,63 @@ INDEX = r'''<!doctype html>
       updateRecentStream();
     }
 
+    function provenanceBadge(r) {
+      const ptype = r.provenance_type || 'synthetic';
+      const dname = r.dataset_name || (ptype === 'real_sample' ? 'Real Telemetry' : 'Synthetic Benchmark');
+      if (ptype === 'real_sample') {
+        return `<span class="badge" style="background:rgba(16,185,129,.18);color:#10b981;border:1px solid rgba(16,185,129,.35);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;">REAL SAMPLE · ${esc(dname)}</span>`;
+      } else if (ptype === 'live_feed') {
+        return `<span class="badge" style="background:rgba(0,212,255,.18);color:#00d4ff;border:1px solid rgba(0,212,255,.35);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;">LIVE FEED · ${esc(dname)}</span>`;
+      } else if (ptype === 'curated_snapshot') {
+        return `<span class="badge" style="background:rgba(251,191,36,.18);color:#fbbf24;border:1px solid rgba(251,191,36,.35);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;">CURATED SNAPSHOT · ${esc(dname)}</span>`;
+      }
+      return `<span class="badge" style="background:rgba(168,85,247,.18);color:#a855f7;border:1px solid rgba(168,85,247,.35);font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;">SYNTHETIC · ${esc(dname)}</span>`;
+    }
+
+    function frameworkBadge(fw) {
+      if (!fw) return '';
+      const isSparta = fw.toUpperCase().includes('SPARTA');
+      const color = isSparta ? '#00d4ff' : '#a855f7';
+      const bg = isSparta ? 'rgba(0,212,255,.12)' : 'rgba(168,85,247,.12)';
+      const border = isSparta ? 'rgba(0,212,255,.3)' : 'rgba(168,85,247,.3)';
+      return `<span class="badge" style="background:${bg};color:${color};border:1px solid ${border};font-size:10px;font-weight:800;letter-spacing:.04em;padding:2px 6px;border-radius:4px;">${esc(fw)}</span>`;
+    }
+
     function renderTimeline(targetId, records) {
       const target = document.getElementById(targetId);
       const filtered = activeSource === 'all' ? records : records.filter(r => r.source === activeSource);
       if (!filtered.length) { target.innerHTML = '<div class="empty">No evidence from this source in the selected case.</div>'; return; }
-      target.innerHTML = filtered.map(r =>
-        `<div class="timeline-item">
+      target.innerHTML = filtered.map(r => {
+        const tfHtml = r.threatfox_match
+          ? `<div style="font-size:11px;color:#f43f5e;margin-top:6px;background:rgba(244,63,94,.1);padding:4px 8px;border-radius:4px;border-left:2px solid #f43f5e;">
+              <strong>ThreatFox CTI Match (Curated Snapshot):</strong> ${esc(r.threatfox_match.malware || 'Known Malware')} · IOC: <code>${esc(r.threatfox_match.ioc)}</code> (${esc(r.threatfox_match.confidence)}% conf)
+            </div>`
+          : '';
+        const kevHtml = r.cisa_kev_match
+          ? `<div style="font-size:11px;color:#fbbf24;margin-top:6px;background:rgba(251,191,36,.1);padding:4px 8px;border-radius:4px;border-left:2px solid #fbbf24;">
+              <strong>CISA KEV Exploit (Curated Snapshot):</strong> ${esc(r.cisa_kev_match.cve)} — ${esc(r.cisa_kev_match.vulnerability_name)}
+            </div>`
+          : '';
+        return `<div class="timeline-item">
           <div class="ttime">${esc(timeLabel(r.timestamp))}</div>
           <div class="evidence">
-            <div class="evidence-head">
+            <div class="evidence-head" style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap;">
               <strong class="evidence-title">${esc(r.summary)}</strong>
-              ${sourceBadge(r.source)}
+              <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+                ${sourceBadge(r.source)}
+                ${provenanceBadge(r)}
+              </div>
             </div>
-            ${r.technique ? `<span class="technique-tag">${esc(r.technique)} · ${esc(r.technique_name || '')}</span>` : ''}
+            <div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap;">
+              ${r.technique ? `<span class="technique-tag">${esc(r.technique)} · ${esc(r.technique_name || '')}</span>` : ''}
+              ${r.framework ? frameworkBadge(r.framework) : ''}
+            </div>
             ${r.technique_reason ? `<p class="evidence-reason">💡 ${esc(r.technique_reason)}</p>` : ''}
+            ${tfHtml}
+            ${kevHtml}
           </div>
-        </div>`).join('');
+        </div>`;
+      }).join('');
     }
 
     function renderFilters() {
@@ -1308,12 +1350,12 @@ INDEX = r'''<!doctype html>
           const info = data.threat || data.vulnerability;
           resEl.innerHTML = `<div style="background:var(--surface);padding:8px;border-radius:6px;border-left:3px solid var(--red);">
             <strong style="color:var(--red);">MATCH FOUND:</strong> ${esc(q)}<br>
-            <span><strong>Source:</strong> ${endpoint.includes('cisa') ? 'CISA KEV Catalog' : 'ThreatFox / abuse.ch'}</span><br>
+            <span><strong>Source:</strong> ${endpoint.includes('cisa') ? 'CISA KEV Catalog (Curated Snapshot)' : 'ThreatFox / abuse.ch (Curated Snapshot)'}</span><br>
             <span><strong>Details:</strong> ${esc(info.threat_type_desc || info.vulnerabilityName || info.shortDescription || 'Known Threat')} (${esc(info.confidence_level ? info.confidence_level + '% confidence' : 'KEV Known Exploited')})</span>
           </div>`;
         } else {
           resEl.innerHTML = `<div style="background:var(--surface);padding:8px;border-radius:6px;border-left:3px solid var(--green);">
-            <strong style="color:var(--green);">NO MATCH:</strong> ${esc(q)} not found in active curated CTI IOC list.
+            <strong style="color:var(--green);">NO MATCH:</strong> ${esc(q)} not found in local curated CTI snapshot.
           </div>`;
         }
       } catch (err) {

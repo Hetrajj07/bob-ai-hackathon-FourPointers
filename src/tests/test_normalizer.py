@@ -31,7 +31,10 @@ def test_normalize_otrf_process_creation():
     assert canonical["process"] == "powershell.exe"
     assert canonical["parent_process"] == "WINWORD.EXE"
     assert canonical["attack_id_hint"] == "T1059.001"
+    assert canonical["rule_technique_hint"] == "T1059.001"
     assert canonical["origin"] == "OTRF Security Datasets"
+    assert canonical["provenance_type"] == "real_sample"
+    assert canonical["dataset_name"] == "OTRF Security Datasets"
 
 
 def test_normalize_otrf_lsass_access():
@@ -50,6 +53,8 @@ def test_normalize_otrf_lsass_access():
     canonical = normalize_otrf(otrf_event)
     assert canonical["event_type"] == "process_access"
     assert canonical["attack_id_hint"] == "T1003.001"
+    assert canonical["rule_technique_hint"] == "T1003.001"
+    assert canonical["provenance_type"] == "real_sample"
     assert "lsass.exe" in canonical["detail"]
 
 
@@ -72,17 +77,23 @@ def test_normalize_cicids_flow():
     assert canonical["dst_port"] == 443
     assert canonical["protocol"] == "TCP"
     assert canonical["origin"] == "CIC-IDS2017 Dataset"
+    assert canonical["provenance_type"] == "real_sample"
+    assert canonical["dataset_name"] == "CIC-IDS2017"
 
 
 def test_auto_normalize():
     raw_otrf = {"EventID": 1, "Computer": "HOST1", "EventData": {}}
     res_otrf = auto_normalize(raw_otrf)
     assert res_otrf["origin"] == "OTRF Security Datasets"
+    assert res_otrf["provenance_type"] == "real_sample"
 
     raw_cic = {"FlowID": "flow-123", "SourceIp": "1.1.1.1", "DestinationIp": "2.2.2.2"}
     res_cic = auto_normalize(raw_cic)
     assert res_cic["origin"] == "CIC-IDS2017 Dataset"
+    assert res_cic["provenance_type"] == "real_sample"
 
     raw_std = {"source": "siem", "host": "HOST-X", "event_type": "login"}
     res_std = auto_normalize(raw_std)
     assert res_std["host"] == "HOST-X"
+    assert res_std["provenance_type"] == "synthetic"
+    assert res_std["dataset_name"] == "Synthetic Benchmark"

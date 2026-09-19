@@ -38,3 +38,15 @@ def test_enrich_record():
     enriched = enrich_record(record, root=ROOT)
     assert enriched.get("threatfox_match") is not None
     assert enriched.get("threat_actor_hint") == "Cobalt Strike"
+    assert enriched["threatfox_match"]["provenance"] == "curated_snapshot"
+
+    record_kev = {
+        "_id": "TEST-REC-02",
+        "timestamp": "2026-09-18T14:31:00Z",
+        "source": "siem",
+        "detail": "Exploit attempt targeting CVE-2023-34362 against public DMZ endpoint",
+    }
+    enriched_kev = enrich_record(record_kev, root=ROOT)
+    assert enriched_kev.get("cisa_kev_match") is not None
+    assert enriched_kev["cisa_kev_match"]["cve"] == "CVE-2023-34362"
+    assert enriched_kev["cisa_kev_match"]["provenance"] == "curated_snapshot"

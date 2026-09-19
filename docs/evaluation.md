@@ -23,22 +23,23 @@ python src/evaluate.py
 Current result:
 
 ```text
-Dataset
-  records:               62
-  labeled scenarios:      5  (4 attack, 1 benign)
+Dataset: 62 records, 5 labeled scenarios (4 attack, 1 benign)
 
-Baseline (naïve shared-entity + hard 90-min window)
-  clusters formed:        7
-  attack scenarios recovered:  4 / 4
-  benign scenarios flagged:    1 / 1   ← false positive
-
-ThreatFusion
-  candidate hypotheses:   5
-  promoted incidents:     4
-  attack scenarios promoted:   4 / 4
-  benign scenarios promoted:   0 / 1   ← correctly suppressed
-  incident recall:        1.000
-  false positive rate:    0.000
+Metric Comparison:
+┌─────────────────────────┬───────────┬──────────────┐
+│ Metric                  │ Baseline  │ ThreatFusion │
+├─────────────────────────┼───────────┼──────────────┤
+│ Formed Clusters         │ 7         │ 5 (hypotheses)│
+│ Promoted Incidents      │ 7         │ 4            │
+│ True Positives (TP)     │ 4         │ 4            │
+│ False Positives (FP)    │ 1         │ 0            │
+│ False Negatives (FN)    │ 0         │ 0            │
+│ True Negatives (TN)     │ 0         │ 1            │
+│ Precision               │ 0.800     │ 1.000        │
+│ Recall                  │ 1.000     │ 1.000        │
+│ F1 Score                │ 0.889     │ 1.000        │
+│ False Positive Rate     │ 1.000     │ 0.000        │
+└─────────────────────────┴───────────┴──────────────┘
 ```
 
 The baseline recovers all 4 attack scenarios but also flags the benign cluster as an incident.

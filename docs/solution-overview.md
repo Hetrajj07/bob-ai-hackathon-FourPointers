@@ -40,15 +40,27 @@
 
 ---
 
+## Telemetry & CTI Provenance Model
+
+ThreatFusion supports multiple telemetry sources through a canonical normalization layer. Public real-world host/network datasets are used as reproducible samples where appropriate; CTI can be represented through curated snapshots and/or live feeds; SPARTA provides the space-cyber reference taxonomy; satellite telemetry in the demonstration remains synthetic.
+
+- **Host Telemetry (OTRF Security Datasets):** Real-world captured Sysmon/Windows event samples demonstrating genuine adversary procedures and benign baseline events.
+- **Network Telemetry (CIC-IDS2017):** Real-world PCAP-derived network flow samples covering brute force, DoS, port scanning, and benign web traffic.
+- **Threat Intelligence (ThreatFox & CISA KEV):** Local curated snapshots of active malware indicators and known exploited vulnerabilities, guaranteeing deterministic offline demonstration.
+- **Space-Cyber Domain (SPARTA):** Structured space-attack taxonomy developed by Aerospace Corporation, providing dedicated satellite TTP mappings without contaminating terrestrial APT actor profiles.
+- **Satellite Feeds:** Demonstration telemetry modeled after real satellite command & telemetry subsystems (AOCS, TT&C, Solar Array), explicitly tagged as synthetic.
+
+---
+
 ## Comparison: Naïve SIEM vs. ThreatFusion
 
 | Capability | Naïve Correlation / Static SIEM | ThreatFusion Engine |
 |---|---|---|
-| **Feed Sources** | Single SIEM or endpoint silo | Multi-source: SIEM, satellite feeds, cyber sensors, CTI |
+| **Feed Sources** | Single SIEM or endpoint silo | Multi-source: SIEM, real host/network samples, satellite feeds, CTI |
 | **Storage & State** | Static or heavy external infra | Lightweight, zero-dependency persistent SQLite backend |
 | **Clustering Logic** | Blind "same host + time window" | Inverted entity index + relationship weights + temporal decay |
 | **False-Positive Handling** | Alert inflation; high analyst fatigue | Strict candidate vs. incident promotion + negative evidence |
-| **ATT&CK Mapping** | Generic tactic keyword hits | Specific sub-technique mapping with per-record provenance |
+| **Taxonomy Mapping** | Generic tactic keyword hits | Dual-framework: MITRE ATT&CK sub-techniques + SPARTA space TTPs |
 | **Prioritization** | Single opaque 1-100 severity number | 4D decomposition: Confidence, Severity, Impact, Urgency |
 | **Commander Briefing** | Raw log dumps and tickets | Structured, decision-ready BLUF in plain language |
-| **AI Assistant** | Uncontrolled LLM prompt hallucination | Grounded IBM Bob MCP server with isolated scores |
+| **AI Assistant** | Uncontrolled LLM prompt hallucinations | Grounded, evidence-backed IBM Bob MCP server with isolated scores |

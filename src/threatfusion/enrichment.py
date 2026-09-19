@@ -1,13 +1,17 @@
 """Threat Intelligence and IOC enrichment module for ThreatFusion.
 
-Integrates real CTI feeds:
-- ThreatFox / abuse.ch community IOC database
-- CISA Known Exploited Vulnerabilities (KEV) catalog
+Integrates curated local snapshots of real CTI feeds:
+- ThreatFox / abuse.ch community IOC database (curated offline snapshot)
+- CISA Known Exploited Vulnerabilities (KEV) catalog (curated offline snapshot)
+
+NOTE: Lookups operate over local curated snapshots ensuring 100% deterministic,
+offline-safe evaluation without requiring external live network access.
 """
 from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any
 
@@ -65,31 +69,44 @@ def _load_cisa_kev(root: Path | None = None) -> dict[str, dict[str, Any]]:
 
 
 def lookup_threatfox(indicator: str, root: Path | None = None) -> dict[str, Any] | None:
-    """Check an IP, domain, or IOC against the ThreatFox intelligence database."""
+    """Check an IP, domain, or IOC against the ThreatFox intelligence snapshot."""
     db = _load_threatfox_db(root)
     clean_val = indicator.strip().lower()
     if clean_val in db:
-        return db[clean_val]
+        res = dict(db[clean_val])
+        res.setdefault("provenance", "curated_snapshot")
+        res.setdefault("dataset_name", "ThreatFox / abuse.ch")
+        return res
     # Check IP without port
     if ":" in clean_val:
         ip_only = clean_val.split(":")[0]
         if ip_only in db:
-            return db[ip_only]
+            res = dict(db[ip_only])
+            res.setdefault("provenance", "curated_snapshot")
+            res.setdefault("dataset_name", "ThreatFox / abuse.ch")
+            return res
     return None
 
 
 def check_cisa_kev(cve_id: str, root: Path | None = None) -> dict[str, Any] | None:
-    """Check a CVE identifier against the CISA Known Exploited Vulnerabilities catalog."""
+    """Check a CVE identifier against the CISA Known Exploited Vulnerabilities snapshot."""
     db = _load_cisa_kev(root)
     clean_cve = cve_id.strip().upper()
-    return db.get(clean_cve)
+    hit = db.get(clean_cve)
+    if hit:
+        res = dict(hit)
+        res.setdefault("provenance", "curated_snapshot")
+        res.setdefault("dataset_name", "CISA KEV Catalog")
+        return res
+    return None
 
 
 def enrich_record(record: dict[str, Any], root: Path | None = None) -> dict[str, Any]:
     """Enrich an observation record with ThreatFox CTI and CISA KEV context.
 
-    If an IP or domain matches a known ThreatFox IOC, explicitly promotes it to an
-    IOC entity and attaches the malware attribution.
+    If an IP matches a known ThreatFox IOC, elevates it to an IOC entity with
+    malware attribution. If a CVE is mentioned, attaches CISA KEV exploitation metadata.
+    Both enrichment feeds are tagged with provenance 'curated_snapshot'.
     """
     enriched = dict(record)
     candidates = []
@@ -109,6 +126,8 @@ def enrich_record(record: dict[str, Any], root: Path | None = None) -> dict[str,
                 "threat_type": match.get("threat_type"),
                 "confidence": match.get("confidence_level", 90),
                 "tags": match.get("tags", []),
+                "provenance": "curated_snapshot",
+                "dataset_name": "ThreatFox / abuse.ch",
             }
             enriched["threat_actor_hint"] = malware_name
             # Explicitly elevate matched IP to IOC status in the record
@@ -116,6 +135,27 @@ def enrich_record(record: dict[str, Any], root: Path | None = None) -> dict[str,
             if isinstance(current_iocs, list):
                 if match["ioc_value"] not in current_iocs:
                     enriched["iocs"] = current_iocs + [match["ioc_value"]]
+            break
+
+    # CISA KEV detection
+    cve_candidates = []
+    if "cve" in record and record["cve"]:
+        cve_candidates.append(str(record["cve"]))
+    detail_str = str(record.get("detail") or record.get("text") or "")
+    cve_matches = re.findall(r"(CVE-\d{4}-\d{4,7})", detail_str, re.IGNORECASE)
+    cve_candidates.extend(cve_matches)
+
+    for cve_id in cve_candidates:
+        cisa_hit = check_cisa_kev(cve_id, root)
+        if cisa_hit:
+            enriched["cisa_kev_match"] = {
+                "cve": cisa_hit["cveID"],
+                "vulnerability_name": cisa_hit.get("vulnerabilityName", "Known Exploited Vulnerability"),
+                "required_action": cisa_hit.get("requiredAction"),
+                "known_ransomware_campaign": cisa_hit.get("knownRansomwareCampaignUse"),
+                "provenance": "curated_snapshot",
+                "dataset_name": "CISA KEV Catalog",
+            }
             break
 
     return enriched
