@@ -105,7 +105,9 @@ def init_db(
 
 
 def seed_from_files(conn: sqlite3.Connection, root: Path) -> None:
-    """Seed alerts and assets from demo JSON files into the database."""
+    """Seed baseline demo alerts and assets from demo JSON files into the database."""
+    from src.threatfusion.enrichment import enrich_record
+
     data_dir = root / "src" / "data"
     alerts_file = data_dir / "demo_alerts.json"
     assets_file = data_dir / "assets.json"
@@ -116,7 +118,7 @@ def seed_from_files(conn: sqlite3.Connection, root: Path) -> None:
         with alerts_file.open(encoding="utf-8") as f:
             records = json.load(f)
         for r in records:
-            _insert_alert_record(conn, r, now_iso)
+            _insert_alert_record(conn, enrich_record(r, root=root), now_iso)
 
     if assets_file.exists():
         with assets_file.open(encoding="utf-8") as f:
@@ -138,7 +140,7 @@ def seed_from_files(conn: sqlite3.Connection, root: Path) -> None:
 
     conn.execute(
         "INSERT INTO audit_log (timestamp, action, details) VALUES (?, ?, ?)",
-        (now_iso, "seed_demo_data", f"Seeded demo data from {data_dir}"),
+        (now_iso, "seed_demo_data", f"Seeded demo baseline from {data_dir}"),
     )
     conn.commit()
 

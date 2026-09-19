@@ -143,7 +143,6 @@ def evaluate():
             "true_negatives": tn,
             "incident_recall": recall,
             "precision": precision,
-            "recall": recall,
             "f1_score": f1,
             "false_positive_rate": fpr,
         },

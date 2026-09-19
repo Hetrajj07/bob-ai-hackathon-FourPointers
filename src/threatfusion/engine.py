@@ -640,7 +640,11 @@ def score_cluster(cluster: list[dict[str, Any]], techniques: dict[str, Any], edg
 
     tech_conf = (sum(e["confidence"] for e in tech_events) / len(tech_events)) if tech_events else 0.0
     behavior_severity = max([TECHNIQUE_RISK.get(e["technique"], 55) for e in tech_events] or [35])
-    source_quality = sum(max(r["source_credibility"] for r in cluster if r["source"] == src) for src in {r["source"] for r in cluster}) / max(1, len({r["source"] for r in cluster}))
+    unique_sources = {r["source"] for r in cluster}
+    source_quality = sum(
+        max((r["source_credibility"] for r in cluster if r["source"] == src), default=0.60)
+        for src in unique_sources
+    ) / max(1, len(unique_sources))
     corroboration = 0.45 * src_ind + 0.30 * source_coverage + 0.25 * source_quality
     # Explainable confidence: behavior + corroboration + IOC specificity - contradiction.
     raw_conf = 0.45 * tech_conf + 0.30 * flow["score"] + 0.18 * corroboration + 0.07 * ioc_specificity

@@ -14,6 +14,7 @@ Zero ground-truth access during runtime. All scores and evidence are auditable.
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -182,6 +183,18 @@ def send_response(message: dict[str, Any]) -> None:
     """Write JSON-RPC message to stdout followed by newline."""
     sys.stdout.write(json.dumps(message, separators=(",", ":")) + "\n")
     sys.stdout.flush()
+
+
+def sanitize_output(obj: Any) -> Any:
+    """Sanitize strings in tool output data to prevent prompt injection or markdown control sequence hijacking."""
+    if isinstance(obj, str):
+        cleaned = re.sub(r'(?i)<system>|</system>|<prompt>|</prompt>|```', '', obj)
+        return cleaned.strip()
+    if isinstance(obj, dict):
+        return {k: sanitize_output(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [sanitize_output(v) for v in obj]
+    return obj
 
 
 def load_engine_state() -> tuple[dict[str, Any], list[dict[str, Any]]]:
@@ -664,7 +677,8 @@ def main() -> None:
                 tool_name = params.get("name")
                 tool_args = params.get("arguments") or {}
                 result_obj = execute_tool(tool_name, tool_args)
-                is_error = isinstance(result_obj, dict) and "error" in result_obj
+                sanitized_result = sanitize_output(result_obj)
+                is_error = isinstance(sanitized_result, dict) and "error" in sanitized_result
 
                 send_response({
                     "jsonrpc": "2.0",
@@ -673,7 +687,7 @@ def main() -> None:
                         "content": [
                             {
                                 "type": "text",
-                                "text": json.dumps(result_obj, indent=2),
+                                "text": json.dumps(sanitized_result, indent=2),
                             }
                         ],
                         "isError": is_error,
