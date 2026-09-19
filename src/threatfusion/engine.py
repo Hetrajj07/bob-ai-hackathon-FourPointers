@@ -89,6 +89,7 @@ __all__ = [
     "score_cluster",
     "tag_technique",
     "temporal_decay",
+    "_cluster_span_minutes",
 ]
 
 IOC_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
@@ -288,7 +289,29 @@ def edge_strength(a: dict[str, Any], b: dict[str, Any], max_minutes: float = 90.
     return strength, reasons
 
 
-def candidate_clusters(norm: list[dict[str, Any]], threshold: float = 0.38) -> list[list[dict[str, Any]]]:
+def _cluster_span_minutes(cluster: list[dict[str, Any]]) -> float:
+    """Return the total time span of a cluster in minutes (first → last event)."""
+    timestamps = [parse_ts(r["timestamp"]) for r in cluster]
+    if len(timestamps) < 2:
+        return 0.0
+    return (max(timestamps) - min(timestamps)).total_seconds() / 60.0
+
+
+def candidate_clusters(
+    norm: list[dict[str, Any]],
+    threshold: float = 0.38,
+    max_span_minutes: float = 480.0,
+) -> list[list[dict[str, Any]]]:
+    """Build candidate hypotheses using entity/time correlation.
+
+    Two-stage process:
+    1. DSU edge-based union: pairs within max_minutes (90) and above the edge
+       strength threshold are joined. This is efficient but can produce
+       transitive chains where the first and last event are far apart.
+    2. Cluster-level span check: after union, any cluster whose total time span
+       exceeds max_span_minutes (default 8 hours) is split into sub-windows.
+       This prevents slow chaining attacks from collapsing into one giant cluster.
+    """
     d = DSU()
     for r in norm:
         d.find(r["id"])
@@ -316,7 +339,31 @@ def candidate_clusters(norm: list[dict[str, Any]], threshold: float = 0.38) -> l
     groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for r in norm:
         groups[d.find(r["id"])].append(r)
-    return [sorted(v, key=lambda x: x["timestamp"]) for v in groups.values() if len(v) > 1]
+    raw_clusters = [sorted(v, key=lambda x: x["timestamp"]) for v in groups.values() if len(v) > 1]
+
+    # Stage 2: split clusters whose total span exceeds max_span_minutes into
+    # sequential sub-windows. Each sub-window starts a new window when the gap
+    # to the current window start would exceed max_span_minutes.
+    result = []
+    for cluster in raw_clusters:
+        if _cluster_span_minutes(cluster) <= max_span_minutes:
+            result.append(cluster)
+            continue
+        # Greedy sequential split: slide a window forward.
+        window: list[dict[str, Any]] = [cluster[0]]
+        window_start = parse_ts(cluster[0]["timestamp"])
+        for record in cluster[1:]:
+            record_ts = parse_ts(record["timestamp"])
+            if (record_ts - window_start).total_seconds() / 60.0 > max_span_minutes:
+                if len(window) > 1:
+                    result.append(window)
+                window = [record]
+                window_start = record_ts
+            else:
+                window.append(record)
+        if len(window) > 1:
+            result.append(window)
+    return result
 
 
 def tag_technique(r: dict[str, Any], techniques: dict[str, Any]) -> tuple[str | None, float, str | None]:

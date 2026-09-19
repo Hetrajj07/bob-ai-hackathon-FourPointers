@@ -282,6 +282,26 @@ INDEX = r'''<!doctype html>
     .check-label { font-size: 13px; font-weight: 700; color: var(--text); }
     .check-detail { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
+    /* ── NOT-PROMOTED CANDIDATES ── */
+    .not-promoted-card {
+      padding: 14px 16px; border: 1px solid rgba(244,63,94,.3);
+      border-radius: 10px; background: rgba(244,63,94,.04);
+    }
+    .np-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+    .np-id { font-family: ui-monospace, monospace; font-size: 12px; font-weight: 700; color: var(--text2); }
+    .np-badge {
+      padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 900; letter-spacing: .06em;
+      background: var(--red-dim); color: var(--red); border: 1px solid rgba(244,63,94,.4);
+    }
+    .np-meta { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .np-checks { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .check-pill {
+      padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;
+    }
+    .check-pill.pass { background: var(--green-dim); color: var(--green); border: 1px solid rgba(16,185,129,.3); }
+    .check-pill.fail { background: var(--red-dim); color: var(--red); border: 1px solid rgba(244,63,94,.3); }
+    .np-reason { font-size: 12px; color: var(--red); font-style: italic; }
+
     /* ── SOURCE BADGES ── */
     .source-badge {
       display: inline-block; padding: 2px 7px; border-radius: 4px;
@@ -607,21 +627,30 @@ INDEX = r'''<!doctype html>
             <p style="font-size:13px;color:var(--muted);">The bundled benchmark is a reproducible synthetic demonstration. These numbers reflect the demo dataset.</p>
             <div class="compare-funnel">
               <div class="funnel-box">
-                <span class="funnel-big raw" id="c-raw">37</span>
+                <span class="funnel-big raw" id="c-raw">—</span>
                 <div class="funnel-desc">Raw observations<br><span style="font-size:11px;color:var(--muted);">4 source schemas</span></div>
               </div>
               <span class="funnel-big-arrow">→</span>
               <div class="funnel-box">
-                <span class="funnel-big cand">2</span>
+                <span class="funnel-big cand" id="c-cand">—</span>
                 <div class="funnel-desc">Candidate hypotheses<br><span style="font-size:11px;color:var(--muted);">Entity + time links</span></div>
               </div>
               <span class="funnel-big-arrow">→</span>
               <div class="funnel-box">
-                <span class="funnel-big prom">1</span>
-                <div class="funnel-desc">Promoted incident<br><span style="font-size:11px;color:var(--muted);">All 4 checks passed</span></div>
+                <span class="funnel-big prom" id="c-prom">—</span>
+                <div class="funnel-desc">Promoted incidents<br><span style="font-size:11px;color:var(--muted);">All 4 checks passed</span></div>
               </div>
             </div>
           </article>
+
+          <!-- NOT PROMOTED candidates -->
+          <article class="card" style="margin-top:0;">
+            <p class="eyebrow">Promotion boundary</p>
+            <h2>Why some candidates were NOT escalated</h2>
+            <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">A shared entity creates a hypothesis — not an incident. Each candidate must satisfy four independent checks before it is promoted. Candidates that fail stay visible here so analysts can audit the decision.</p>
+            <div id="not-promoted-list" class="stack" style="gap:10px;"></div>
+          </article>
+
           <div class="compare-grid" style="margin-top:0;">
             <article class="card compare-card bad">
               <div class="compare-card-title">❌ Naïve approach — what it gets wrong</div>
@@ -738,23 +767,65 @@ INDEX = r'''<!doctype html>
 
     async function boot() {
       try {
-        const res = await fetch('/api/summary');
-        if (!res.ok) throw new Error('Unable to load analysis');
-        summary = await res.json();
-        // Funnel numbers
+        const [summaryRes, candidatesRes] = await Promise.all([
+          fetch('/api/summary'),
+          fetch('/api/candidates'),
+        ]);
+        if (!summaryRes.ok) throw new Error('Unable to load analysis');
+        summary = await summaryRes.json();
+        // Funnel numbers (header + compare panel)
         document.getElementById('f-raw').textContent = summary.metrics.raw_records;
         document.getElementById('f-cand').textContent = summary.metrics.candidate_clusters;
         document.getElementById('f-prom').textContent = summary.metrics.promoted_incidents;
         document.getElementById('c-raw').textContent = summary.metrics.raw_records;
+        document.getElementById('c-cand').textContent = summary.metrics.candidate_clusters;
+        document.getElementById('c-prom').textContent = summary.metrics.promoted_incidents;
         document.getElementById('engine-badge').textContent = `Engine ${summary.metadata.engine_version}`;
         if (summary.incidents.length) await loadCase(summary.incidents[0].id, false);
         else renderQueue();
         setStatus(`Engine ${summary.metadata.engine_version} · ATT&CK ${summary.metadata.attack_kb_version} · ground truth excluded from runtime`);
+        // Render not-promoted candidates
+        if (candidatesRes.ok) {
+          const candData = await candidatesRes.json();
+          renderNotPromoted(candData.candidates.filter(c => !c.promoted));
+        }
       } catch (e) {
         setStatus(e.message, true);
         document.getElementById('case-title').textContent = 'Analysis unavailable';
         document.getElementById('case-title').classList.remove('loading-pulse');
       }
+    }
+
+    const CHECK_LABELS_SHORT = {
+      minimum_behavior_evidence: 'Multiple ATT&CK behaviors',
+      multi_tactic_progression:  'Multi-tactic progression',
+      evidence_confidence:       'Evidence confidence',
+      source_independence:       'Independent source support',
+    };
+
+    function renderNotPromoted(unpromoted) {
+      const el = document.getElementById('not-promoted-list');
+      if (!unpromoted.length) {
+        el.innerHTML = '<p style="font-size:13px;color:var(--muted);">All candidates in this dataset passed the promotion checks.</p>';
+        return;
+      }
+      el.innerHTML = unpromoted.map(c => {
+        const checks = Object.entries(c.promotion_checks || {}).map(([k, passed]) =>
+          `<span class="check-pill ${passed ? 'pass' : 'fail'}">${passed ? '✓' : '✗'} ${esc(CHECK_LABELS_SHORT[k] || k)}</span>`
+        ).join('');
+        const failedNames = Object.entries(c.promotion_checks || {})
+          .filter(([, v]) => !v)
+          .map(([k]) => CHECK_LABELS_SHORT[k] || k);
+        return `<div class="not-promoted-card">
+          <div class="np-header">
+            <span class="np-id">${esc(c.id)}</span>
+            <span class="np-badge">NOT PROMOTED</span>
+          </div>
+          <div class="np-meta">${esc(c.record_count)} observations · ${esc(c.technique_count)} ATT&CK behaviors · ${esc(c.confidence)}% confidence · flow ${esc(c.attack_flow_score)}/100</div>
+          <div class="np-checks">${checks}</div>
+          ${failedNames.length ? `<div class="np-reason">Failed: ${esc(failedNames.join(', '))}. Insufficient evidence to meet the promotion boundary.</div>` : ''}
+        </div>`;
+      }).join('');
     }
 
     async function loadCase(id, announce = true) {
@@ -1046,6 +1117,36 @@ def incident(incident_id: str) -> dict:
         if candidate["id"] == incident_id:
             return _with_presentation_fields(candidate)
     raise HTTPException(status_code=404, detail="Incident not found")
+
+
+@app.get("/api/candidates")
+def candidates() -> dict:
+    """Return all candidate hypotheses, including those that were NOT promoted.
+
+    Each candidate includes which promotion checks it passed/failed, so the UI
+    can show exactly why a hypothesis was held below the promotion boundary.
+    """
+    try:
+        analysis = analyze(ROOT)
+    except Exception as exc:
+        logger.exception("Analysis failed")
+        raise HTTPException(status_code=500, detail=f"Analysis error: {exc}") from exc
+    promoted_ids = {inc["id"] for inc in promoted_incidents(analysis)}
+    result = []
+    for candidate in analysis["incidents"]:
+        result.append({
+            "id": candidate["id"],
+            "promoted": candidate["promotable"],
+            "priority": candidate.get("priority"),
+            "priority_score": candidate.get("priority_score"),
+            "confidence": candidate.get("confidence"),
+            "record_count": len(candidate.get("record_ids", [])),
+            "sources": candidate.get("sources", []),
+            "technique_count": candidate.get("technique_count", 0),
+            "promotion_checks": candidate.get("promotion_checks", {}),
+            "attack_flow_score": round(candidate.get("attack_flow", {}).get("score", 0) * 100, 1),
+        })
+    return {"candidates": result, "promoted_count": len(promoted_ids), "total_candidates": len(result)}
 
 
 @app.get("/api/evaluation")

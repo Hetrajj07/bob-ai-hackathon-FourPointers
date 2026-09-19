@@ -21,41 +21,93 @@ SERVER_VERSION = ENGINE_VERSION
 SUPPORTED_PROTOCOL_VERSIONS = ["2026-07-28", "2025-06-18", "2024-11-05"]
 DEFAULT_PROTOCOL_VERSION = "2025-06-18"
 
+_INCIDENT_ID_PROP = {
+    "incident_id": {
+        "type": "string",
+        "description": (
+            "ThreatFusion promoted incident identifier returned by correlate_events, "
+            "e.g. INC-CAND-ABC12345. Use correlate_events first if you do not have an ID."
+        ),
+    }
+}
+
 TOOLS = [
     {
         "name": "correlate_events",
-        "description": "Run deterministic ThreatFusion analysis over the bundled demo telemetry and return promoted incidents plus counts.",
+        "description": (
+            "Run the deterministic ThreatFusion analysis over the bundled demo telemetry. "
+            "Returns promoted incident IDs, priority scores, confidence, mission impact, and "
+            "raw/candidate/promoted counts. Call this first to discover incident IDs before "
+            "using any other tool."
+        ),
         "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False},
     },
     {
         "name": "get_incident",
-        "description": "Retrieve grounded evidence, ATT&CK mapping, risk factors, provenance and uncertainty for one promoted incident.",
-        "inputSchema": {"type": "object", "properties": {"incident_id": {"type": "string"}}, "required": ["incident_id"], "additionalProperties": False},
+        "description": (
+            "Retrieve full grounded evidence, ATT&CK technique/tactic mapping, risk factors, "
+            "per-record provenance, asset context, and a BLUF for one promoted incident. "
+            "Use when you need the complete picture of a case."
+        ),
+        "inputSchema": {"type": "object", "properties": _INCIDENT_ID_PROP, "required": ["incident_id"], "additionalProperties": False},
     },
     {
         "name": "explain_risk",
-        "description": "Return the deterministic risk decomposition used to prioritize an incident.",
-        "inputSchema": {"type": "object", "properties": {"incident_id": {"type": "string"}}, "required": ["incident_id"], "additionalProperties": False},
+        "description": (
+            "Return the deterministic risk decomposition used to prioritize an incident: "
+            "evidence confidence, threat severity, mission impact, urgency, source independence, "
+            "and any negative evidence penalties. Use when an analyst asks why a case was scored high or low."
+        ),
+        "inputSchema": {"type": "object", "properties": _INCIDENT_ID_PROP, "required": ["incident_id"], "additionalProperties": False},
     },
     {
         "name": "get_detection_gaps",
-        "description": "Return observed ATT&CK tactics and unobserved intermediate tactics; absence is explicitly treated as a possible telemetry gap.",
-        "inputSchema": {"type": "object", "properties": {"incident_id": {"type": "string"}}, "required": ["incident_id"], "additionalProperties": False},
+        "description": (
+            "Return observed ATT&CK tactics and any intermediate tactics not observed between "
+            "the first and last observed tactic. Absence is explicitly treated as a possible "
+            "telemetry gap, not proof the attacker did not perform that phase."
+        ),
+        "inputSchema": {"type": "object", "properties": _INCIDENT_ID_PROP, "required": ["incident_id"], "additionalProperties": False},
     },
     {
         "name": "generate_bluf",
-        "description": "Generate a commander-ready BLUF from grounded incident evidence and deterministic scores.",
-        "inputSchema": {"type": "object", "properties": {"incident_id": {"type": "string"}}, "required": ["incident_id"], "additionalProperties": False},
+        "description": (
+            "Generate a commander-ready Bottom Line Up Front from grounded incident evidence "
+            "and deterministic scores. Includes bottom line, assessment, actor context (not attribution), "
+            "uncertainty, and recommended analyst actions."
+        ),
+        "inputSchema": {"type": "object", "properties": _INCIDENT_ID_PROP, "required": ["incident_id"], "additionalProperties": False},
     },
     {
         "name": "get_remediation_runbook",
-        "description": "Retrieve actionable, prioritized containment, eradication, and detection engineering runbooks for an incident.",
-        "inputSchema": {"type": "object", "properties": {"incident_id": {"type": "string"}}, "required": ["incident_id"], "additionalProperties": False},
+        "description": (
+            "Retrieve prioritized analyst-reviewed response steps for an incident, organised by phase "
+            "(Containment, Eradication, Detection Engineering). Steps require analyst approval; "
+            "ThreatFusion does not perform autonomous containment."
+        ),
+        "inputSchema": {"type": "object", "properties": _INCIDENT_ID_PROP, "required": ["incident_id"], "additionalProperties": False},
     },
     {
         "name": "search_indicators",
-        "description": "Search for specific IP, IOC, host, user, or keyword indicators across raw observations and correlated hypotheses.",
-        "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"], "additionalProperties": False},
+        "description": (
+            "Search for a specific IP address, hostname, username, IOC, or keyword across all "
+            "raw observations and correlated hypotheses. Returns matching record IDs, timestamps, "
+            "sources, and snippets. Limit 10 results."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": (
+                        "IP address, hostname, username, IOC value, or keyword to search for, "
+                        "e.g. '185.214.66.91', 'ENG-DB01', 'jsharma', 'powershell'."
+                    ),
+                }
+            },
+            "required": ["query"],
+            "additionalProperties": False,
+        },
     },
 ]
 
