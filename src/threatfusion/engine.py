@@ -33,6 +33,9 @@ TACTIC_RANK = {t: i for i, t in enumerate(TACTIC_ORDER)}
 SOURCE_CREDIBILITY = {
     "threat_intel_report": 0.92,
     "endpoint": 0.90,
+    "satellite_sensor": 0.88,
+    "satellite_telemetry": 0.88,
+    "satcom_sensor": 0.88,
     "network_sensor": 0.84,
     "siem": 0.78,
 }
@@ -51,6 +54,9 @@ ASSET_DEFAULTS = {
     "ENG-WKS17": {"criticality": 82, "mission_role": "Engineering workstation", "zone": "engineering"},
     "VPN-GW01": {"criticality": 90, "mission_role": "Remote access gateway", "zone": "perimeter"},
     "FIN-LT22": {"criticality": 58, "mission_role": "Finance endpoint", "zone": "corporate"},
+    "SAT-GROUND-01": {"criticality": 96, "mission_role": "Satellite ground control station", "zone": "mission-critical"},
+    "SATCOM-GW02": {"criticality": 92, "mission_role": "Tactical satellite communication gateway", "zone": "perimeter"},
+    "DEF-CMD-HQ01": {"criticality": 98, "mission_role": "Defence command headquarters hub", "zone": "mission-critical"},
 }
 
 TECHNIQUE_RISK = {
@@ -669,25 +675,41 @@ def summarize_record(raw: dict[str, Any]) -> str:
     return str(s)[:220]
 
 
-def analyze(root: Path) -> dict[str, Any]:
-    records, techniques, groups, edges, assets = load_context(str(root.resolve()))
-    if not isinstance(records, list):
-        raise ValueError("demo_alerts.json must contain a JSON list of observations")
-    record_ids = [record.get("_id") for record in records]
+def analyze(
+    root: Path,
+    records: list[dict[str, Any]] | None = None,
+    assets: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    file_records, techniques, groups, edges, file_assets = load_context(str(root.resolve()))
+    target_records = records if records is not None else file_records
+    target_assets = assets if assets is not None else file_assets
+
+    if not isinstance(target_records, list):
+        raise ValueError("Observations must be a list of records")
+    record_ids = [record.get("_id") or record.get("id") for record in target_records]
     if len(record_ids) != len(set(record_ids)):
-        raise ValueError("demo_alerts.json contains duplicate observation IDs")
-    norm = [normalize(r) for r in records]
+        # Deduplicate records by ID if dynamic ingestion included duplicate submission
+        seen_ids = set()
+        deduped = []
+        for r in target_records:
+            rid = r.get("_id") or r.get("id")
+            if rid not in seen_ids:
+                seen_ids.add(rid)
+                deduped.append(r)
+        target_records = deduped
+
+    norm = [normalize(r) for r in target_records]
     clusters = candidate_clusters(norm)
-    incidents = [score_cluster(c, techniques, edges, assets) for c in clusters]
+    incidents = [score_cluster(c, techniques, edges, target_assets) for c in clusters]
     incidents.sort(key=lambda x: (-int(x["promotable"]), -x["priority_score"]))
     return {
-        "records": records,
+        "records": target_records,
         "incidents": incidents,
         "candidate_clusters": clusters,
         "techniques": techniques,
         "groups": groups,
         "edges": edges,
-        "assets": assets,
+        "assets": target_assets,
         "metadata": {
             "engine_version": ENGINE_VERSION,
             "attack_kb_version": "v19.2",
@@ -757,9 +779,22 @@ def bluf(inc: dict[str, Any]) -> dict[str, Any]:
     gaps = inc["attack_flow"].get("unobserved_intermediate_tactics", [])
     # Reuse the existing runbook rather than recomputing it.
     runbook = inc.get("runbook") or remediation_runbook(inc)
+
+    affected_assets = [a.get("asset") for a in inc.get("assets", [])]
+    assets_summary = ", ".join(affected_assets) if affected_assets else "corporate endpoints"
+
+    commander_brief = (
+        f"[{inc['priority']} · PRIORITY {inc['priority_score']}/100] "
+        f"Verified attack hypothesis with {inc['confidence']}% evidence confidence. "
+        f"Adversary activity targeting {assets_summary} (Mission Impact: {inc['mission_impact']}/100, Threat Severity: {inc['severity']}/100). "
+        f"ATT&CK progression: {techniques}. "
+        f"Immediate commander action: {actions[0] if actions else 'Maintain heightened monitoring'}."
+    )
+
     return {
         "bottom_line": f"{inc['priority']} incident with {inc['confidence']}% evidence confidence, {inc['severity']}/100 threat severity and {inc['mission_impact']}/100 mission impact.",
-        "assessment": f"Observed activity forms a {'coherent' if inc['attack_flow']['score'] >= 0.55 else 'weak'} multi-stage behavior pattern. ATT&CK evidence: {techniques}.",
+        "commander_briefing": commander_brief,
+        "assessment": f"Observed activity forms a {'coherent' if inc['attack_flow']['score'] >= 0.55 else 'weak'} multi-stage behavior pattern across {len(inc.get('sources', []))} independent feeds. ATT&CK evidence: {techniques}.",
         "actor_assessment": actor_line,
         "uncertainty": (
             "Unobserved intermediate tactics: " + ", ".join(gaps) + ". Absence may be a telemetry gap rather than absence of attacker activity."

@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # Allow both `python src/mcp_server.py` and `python -m src.mcp_server`.
 sys.path.insert(0, str(ROOT))
 
+from src.threatfusion.db import get_all_alerts, get_assets, get_incident as db_get_incident, init_db  # noqa: E402
 from src.threatfusion.engine import ENGINE_VERSION, TACTIC_RANK, analyze, bluf, clear_context_cache, promoted_incidents, remediation_runbook  # noqa: E402
 
 SERVER_VERSION = ENGINE_VERSION
@@ -118,7 +119,17 @@ def send(message: dict) -> None:
 
 
 def promoted():
-    d = analyze(ROOT)
+    db_file = ROOT / "src" / "data" / "threatfusion.db"
+    records = None
+    assets = None
+    if db_file.exists():
+        try:
+            records = get_all_alerts(db_file)
+            assets = get_assets(db_file)
+        except Exception:
+            records = None
+            assets = None
+    d = analyze(ROOT, records=records, assets=assets)
     return d, promoted_incidents(d)
 
 
@@ -145,7 +156,7 @@ def tool_call(name: str, args: dict):
             raw_str = json.dumps(r).lower()
             if q in raw_str:
                 matches.append({
-                    "record_id": r["_id"],
+                    "record_id": r.get("_id") or r.get("id"),
                     "timestamp": r["timestamp"],
                     "source": r.get("source"),
                     "matched_snippet": r.get("detail") or r.get("text") or r.get("event_type") or "event",
@@ -157,8 +168,19 @@ def tool_call(name: str, args: dict):
     if x is None:
         return {"error": f"Unknown incident {iid}"}
 
+    db_item = None
+    db_file = ROOT / "src" / "data" / "threatfusion.db"
+    if db_file.exists():
+        try:
+            db_item = db_get_incident(iid, db_file)
+        except Exception:
+            db_item = None
+
+    status = db_item.get("status", "open") if db_item else "open"
+    notes = db_item.get("analyst_notes", "") if db_item else ""
+
     if name == "get_incident":
-        return {**x, "bluf": bluf(x)}
+        return {**x, "status": status, "analyst_notes": notes, "bluf": bluf(x)}
     if name == "explain_risk":
         return {
             "priority": x["priority"],

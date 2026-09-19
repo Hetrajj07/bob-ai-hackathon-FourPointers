@@ -87,6 +87,8 @@ demo/*.mkv
 # ── Docker volumes / local data ───────────────────────────────────────────────
 /data/
 !src/data/
+*.db
+*.sqlite3
 logs/
 *.log
 

@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ThreatFusion — Jury Presentation & Evaluation Guide</title>
+  <style>
+    :root {
+      --bg-dark: #0f172a;
+      --card-bg: #1e293b;
+      --accent-blue: #38bdf8;
+      --accent-cyan: #06b6d4;
+      --accent-emerald: #10b981;
+      --accent-purple: #a855f7;
+      --accent-rose: #f43f5e;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-color: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      line-height: 1.6;
+      padding: 2rem 1rem;
+    }
+    .container { max-width: 1000px; margin: 0 auto; }
+
+    /* Hero Banner */
+    .hero {
+      background: linear-gradient(135deg, #1e1b4b 0%, #0f172a 100%);
+      border: 1px solid var(--accent-cyan);
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.15);
+    }
+    .hero h1 { font-size: 2.2rem; color: #fff; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.75rem; }
+    .hero-tagline { font-size: 1.15rem; color: var(--accent-cyan); font-weight: 600; margin-bottom: 1rem; }
+    .hero-pitch {
+      background: rgba(6, 182, 212, 0.1);
+      border-left: 4px solid var(--accent-cyan);
+      padding: 1rem;
+      border-radius: 0 8px 8px 0;
+      font-size: 1.05rem;
+      color: #e2e8f0;
+      margin-top: 1rem;
+    }
+
+    /* Section Cards */
+    .section-card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 1.75rem;
+      margin-bottom: 1.75rem;
+    }
+    .section-title {
+      font-size: 1.4rem;
+      color: var(--accent-blue);
+      border-bottom: 2px solid var(--border-color);
+      padding-bottom: 0.5rem;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Table Styling */
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--border-color); }
+    th { background-color: rgba(255,255,255,0.05); color: var(--accent-blue); font-weight: 600; }
+    tr:hover { background-color: rgba(255,255,255,0.02); }
+
+    /* Badges & Pills */
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .badge-p1 { background-color: rgba(244, 63, 94, 0.2); color: var(--accent-rose); border: 1px solid var(--accent-rose); }
+    .badge-p2 { background-color: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid #f59e0b; }
+    .badge-tech { background-color: rgba(56, 189, 248, 0.15); color: var(--accent-blue); border: 1px solid var(--accent-blue); }
+
+    /* Q&A Boxes */
+    .qa-box {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .qa-question { font-weight: 700; color: #f1f5f9; font-size: 1.05rem; margin-bottom: 0.5rem; }
+    .qa-answer { color: #cbd5e1; font-size: 0.98rem; }
+    .qa-answer strong { color: var(--accent-cyan); }
+
+    /* Highlight Callout */
+    .analogy-box {
+      background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(15, 23, 42, 0.5) 100%);
+      border-left: 4px solid var(--accent-emerald);
+      padding: 1.25rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1.25rem 0;
+    }
+    .analogy-title { font-weight: 700; color: var(--accent-emerald); margin-bottom: 0.25rem; }
+
+    .formula-box {
+      background: rgba(168, 85, 247, 0.1);
+      border: 1px dashed var(--accent-purple);
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+      font-family: monospace;
+      color: #e9d5ff;
+    }
+
+    ul, ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+    li { margin-bottom: 0.4rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <!-- HERO / ELEVATOR PITCH -->
+    <header class="hero">
+      <h1>🛡️ ThreatFusion — Jury Evaluation Guide</h1>
+      <div class="hero-tagline">IBM BoB AI Innovation Hackathon 2026 · AI Track · Team Four-Pointers</div>
+      <div class="hero-pitch">
+        <strong>🚀 Elevator Pitch (Say this in the first 10 seconds):</strong><br>
+        <em>"ThreatFusion turns 62 noisy security alerts into 4 proven incidents, and explains why, in plain language, through IBM Bob."</em>
+      </div>
+    </header>
+
+    <!-- PART 0: DEMO FLOW & TEAM ROLES -->
+    <section class="section-card">
+      <h2 class="section-title">⏱️ Part 0: Live Demo Flow & Team Speaking Roles</h2>
+      
+      <h3 style="color: var(--accent-cyan); margin-bottom: 0.5rem;">👥 Speaking Role Assignments</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Teammate</th>
+            <th>Section / Part</th>
+            <th>Primary Focus</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Hetraj Rana</strong> (Lead)</td>
+            <td>Part 1 & Live Demo Lead</td>
+            <td>Problem Statement, Hospital Call-Button Analogy, Dashboard UI walk-through.</td>
+          </tr>
+          <tr>
+            <td><strong>Aaryan Patel</strong></td>
+            <td>Part 2 & Part 3</td>
+            <td>Candidate vs Incident distinction, Inverted Index & 4D Risk Model rationale.</td>
+          </tr>
+          <tr>
+            <td><strong>Dhruv Gajera</strong></td>
+            <td>Part 4</td>
+            <td>MITRE ATT&CK v19.2 Sub-techniques & Attack-Flow Coherence Validation.</td>
+          </tr>
+          <tr>
+            <td><strong>Hit Goyani</strong></td>
+            <td>Part 5 & Part 6</td>
+            <td>IBM Bob MCP Integration, Slash Commands (`/investigate`), Security Q&A & Roadmap.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="color: var(--accent-cyan); margin-top: 1.5rem; margin-bottom: 0.5rem;">🎬 Live Demo Click Path (Target: 3 Minutes)</h3>
+      <ol>
+        <li><strong>Open Web Dashboard (`http://127.0.0.1:8000`)</strong>: Point out the header metrics — 62 raw observations reduced to 5 candidate hypotheses and 4 promoted incidents.</li>
+        <li><strong>Click First Incident (`INC-2026-001` - Score 93, P1 Critical)</strong>:
+          <ul>
+            <li>Highlight target asset <code>ENG-DB01</code> (Criticality: 95/100).</li>
+            <li>Show 4D score decomposition: Confidence 92%, Severity 92%, Impact 95%, Urgency 97%.</li>
+            <li>Expand the <strong>Mermaid Attack-Flow Diagram</strong> showing tactic progression: <em>Initial Access &rarr; Execution &rarr; Credential Access &rarr; Lateral Movement</em>.</li>
+          </ul>
+        </li>
+        <li><strong>Switch to IBM Bob AI Workflows</strong>:
+          <ul>
+            <li>Run <code>/investigate INC-2026-001</code>: Show Bob fetching grounded evidence from MCP server without hallucinating scores.</li>
+            <li>Run <code>/bluf INC-2026-001</code>: Show commander-ready executive briefing.</li>
+            <li>Run <code>/runbook INC-2026-001</code>: Show phased Containment, Eradication, and Detection Engineering steps.</li>
+          </ul>
+        </li>
+      </ol>
+    </section>
+
+    <!-- PART 1: CORE ANALOGY & VALUE PROP -->
+    <section class="section-card">
+      <h2 class="section-title">💡 Part 1: Core Value Proposition & Analogy</h2>
+      
+      <div class="analogy-box">
+        <div class="analogy-title">🏥 The Hospital Call-Button Analogy</div>
+        <p><em>"A hospital call-button going off in room 402 doesn't mean code blue; ThreatFusion checks if the patient's vitals are actually dropping before calling the crash cart."</em></p>
+      </div>
+
+      <p>Standard SIEMs alert on every single event, causing analyst fatigue. ThreatFusion creates <strong>candidate hypotheses first</strong>, then checks for corroboration, behavioral coherence, and asset impact before promoting an incident.</p>
+    </section>
+
+    <!-- PART 3: 4D SCORE MATH EXPLAINED -->
+    <section class="section-card">
+      <h2 class="section-title">📐 Part 3: Composite Risk Score Formula Explained</h2>
+      <p>Judges doing quick mental math might ask: <em>"Why isn't the Composite Score (93) a simple average of Confidence (92), Severity (92), Impact (95), and Urgency (97)?"</em></p>
+      
+      <div class="formula-box">
+        <strong>Exact Weighted Risk Decomposition Formula:</strong><br>
+        Composite Score = round( 0.25 × Confidence + 0.30 × Severity + 0.30 × Mission Impact + 0.15 × Urgency )<br><br>
+        <strong>Calculation for INC-2026-001:</strong><br>
+        = round( 0.25(92) + 0.30(92) + 0.30(95) + 0.15(97) )<br>
+        = round( 23.0 + 27.6 + 28.5 + 14.55 )<br>
+        = round( 93.65 ) = <strong>93</strong>
+      </div>
+      <p><em>Why this weighting?</em> Threat Severity and Mission Impact carry the highest weights (30% each) because threat severity and asset criticality drive operational impact in active SOC environments.</p>
+    </section>
+
+    <!-- PREPPED SECURITY Q&A -->
+    <section class="section-card">
+      <h2 class="section-title">🔐 Security Panel Q&A (Prepped Answers)</h2>
+
+      <div class="qa-box">
+        <div class="qa-question">Q1: Can a malicious log message prompt-inject IBM Bob through your MCP tool outputs?</div>
+        <div class="qa-answer">
+          <strong>Answer:</strong> This is a critical security consideration. ThreatFusion mitigates prompt injection by sanitizing all tool outputs before passing them to MCP. Raw log text is stripped of markdown/system control tokens, string fields are sanitized, and data is returned in strict, typed JSON schema objects rather than raw concatenated string context.
+        </div>
+      </div>
+
+      <div class="qa-box">
+        <div class="qa-question">Q2: How does this scale past 62 alerts — what happens at 10,000 alerts/day?</div>
+        <div class="qa-answer">
+          <strong>Answer:</strong> Naive pairwise comparison scales at O(N²). ThreatFusion uses an <strong>Inverted Entity Index</strong> (<code>entity &rarr; list[record_indices]</code>) that restricts temporal decay and edge calculations strictly to records sharing common entities. On our dataset, this reduced comparisons from 666 down to 23 (a 96.5% reduction). At 10,000 alerts/day, the sliding temporal window maintains sub-second query performance.
+        </div>
+      </div>
+
+      <div class="qa-box">
+        <div class="qa-question">Q3: What is your edge over existing SOAR/XDR correlation tools (Splunk SOAR, Cortex XSOAR)?</div>
+        <div class="qa-answer">
+          <strong>Answer:</strong> Most SOAR engines rely on static rule playbooks or black-box ML scoring that analysts cannot easily audit. ThreatFusion offers:
+          <ol>
+            <li><strong>Candidate hypothesis separation</strong> before promotion to avoid alert inflation.</li>
+            <li><strong>Sub-technique MITRE ATT&CK mapping</strong> with explicit rationale provenance.</li>
+            <li><strong>Ground-truth isolated score decomposition</strong> that allows IBM Bob to interrogate structured evidence without hallucinating scores.</li>
+          </ol>
+        </div>
+      </div>
+
+      <div class="qa-box">
+        <div class="qa-question">Q4: Isn't 7 rule-backed ATT&CK techniques thin coverage for a production SOC?</div>
+        <div class="qa-answer">
+          <strong>Answer:</strong> Yes, for a production SOC it would be thin. In this prototype, our goal was to demonstrate deep sub-technique inference (e.g. <code>T1003.001</code> for LSASS memory dumps vs general <code>T1003</code>) and attack-flow coherence. Our roadmap includes a pluggable Detector Registry where community SIGMA rules and YARA signatures automatically map to additional sub-techniques.
+        </div>
+      </div>
+    </section>
+
+    <!-- MITRE ATT&CK CONSISTENCY MATRIX -->
+    <section class="section-card">
+      <h2 class="section-title">🎯 MITRE ATT&CK Sub-technique Matrix</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Technique ID</th>
+            <th>Name</th>
+            <th>Tactic</th>
+            <th>Observed Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-tech">T1566.001</span></td>
+            <td>Spearphishing Attachment</td>
+            <td>Initial Access</td>
+            <td>Email security gateway log with malicious attachment.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-tech">T1059.001</span></td>
+            <td>PowerShell Execution</td>
+            <td>Execution</td>
+            <td>Encoded process launch on <code>ENG-WKS17</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-tech">T1003.001</span></td>
+            <td>LSASS Memory Dump</td>
+            <td>Credential Access</td>
+            <td>Process access event targeting <code>lsass.exe</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-tech">T1021.001</span></td>
+            <td>Remote Desktop Protocol (RDP)</td>
+            <td>Lateral Movement</td>
+            <td>Network probe & lateral RDP session to <code>ENG-DB01</code>.</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-tech">T1021.002</span></td>
+            <td>SMB / Windows Admin Shares</td>
+            <td>Lateral Movement</td>
+            <td>IPC$ share connection from <code>VPN-GW01</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- LIMITATIONS & ROADMAP -->
+    <section class="section-card">
+      <h2 class="section-title">🛣️ Honest Self-Critique & Roadmap</h2>
+      <ul>
+        <li><strong>Rule-based detection coverage</strong>: Currently covers key sub-techniques; scalable via SIGMA rule parser.</li>
+        <li><strong>Synthetic Telemetry</strong>: Demo telemetry simulates real-world attack vectors; tested against isolated offline benchmark `ground_truth.json`.</li>
+        <li><strong>Execution State</strong>: Currently runs in-memory with reload capabilities; roadmap incorporates SQLite/PostgreSQL persistence.</li>
+      </ul>
+    </section>
+
+  </div>
+</body>
+</html>

@@ -13,16 +13,34 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
+from src.threatfusion.db import (
+    delete_asset,
+    get_all_alerts,
+    get_assets,
+    get_incident as db_get_incident,
+    init_db,
+    insert_alert,
+    insert_alerts_bulk,
+    query_alerts,
+    reset_db,
+    save_incidents,
+    update_incident_triage,
+    upsert_asset,
+)
 from src.threatfusion.engine import ENGINE_VERSION, analyze, bluf, clear_context_cache, promoted_incidents, remediation_runbook
 
 logger = logging.getLogger("threatfusion")
 ROOT = Path(__file__).resolve().parents[1]
+
+# Ensure SQLite database is initialized and seeded
+init_db(seed_if_empty=True, root_dir=ROOT)
+
 app = FastAPI(title="ThreatFusion - Analyst Workspace", version=ENGINE_VERSION)
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -94,12 +112,34 @@ INDEX = r'''<!doctype html>
     }
     .brand-name { font-size: 18px; font-weight: 800; color: var(--text); letter-spacing: -.02em; }
     .brand-sub { font-size: 11px; color: var(--muted); letter-spacing: .04em; }
-    .topbar-right { display: flex; align-items: center; gap: 16px; }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .topbar-btn {
+      padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700;
+      background: var(--surface2); color: var(--text); border: 1px solid var(--border2);
+      transition: all .2s;
+    }
+    .topbar-btn:hover { background: var(--border2); border-color: var(--cyan); color: var(--cyan); }
+    .topbar-btn.primary { background: var(--cyan-dim); color: var(--cyan); border-color: rgba(0,212,255,.4); }
     .topbar-badge {
       padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
       background: var(--cyan-dim); color: var(--cyan); border: 1px solid rgba(0,212,255,.3);
     }
     .topbar-meta { font-size: 11px; color: var(--muted); text-align: right; }
+    .triage-select {
+      background: var(--surface); border: 1px solid var(--border2); color: var(--cyan);
+      border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 700;
+    }
+    .btn-sm {
+      background: var(--cyan-dim); color: var(--cyan); border: 1px solid rgba(0,212,255,.3);
+      padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;
+    }
+    .btn-sm:hover { background: var(--cyan); color: #0a0f1e; }
+    .action-btn {
+      background: var(--surface); color: var(--text); border: 1px solid var(--border2);
+      padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; transition: all .2s;
+    }
+    .action-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+    .action-btn.primary { background: var(--cyan); color: #0a0f1e; border-color: var(--cyan); }
 
     /* ── SEARCH BAR ── */
     .search-bar-wrap {
@@ -465,6 +505,8 @@ INDEX = r'''<!doctype html>
         </div>
       </div>
       <div class="topbar-right">
+        <button id="btn-open-sim" class="topbar-btn primary" title="Simulate Multi-Source Threat Feeds">🛰️ Ingest Feeds</button>
+        <button id="btn-reset-demo" class="topbar-btn" title="Reset Demo Data">↺ Reset Demo</button>
         <span class="topbar-badge" id="engine-badge">Loading…</span>
         <div class="topbar-meta">ATT&CK v19.2 · IBM Bob MCP</div>
       </div>
@@ -520,9 +562,21 @@ INDEX = r'''<!doctype html>
             <div id="case-title" class="case-title loading-pulse">Loading…</div>
             <div id="case-summary" class="case-summary-text">Preparing evidence narrative…</div>
           </div>
-          <div class="case-signal">
-            <div class="case-signal-label">Priority</div>
-            <div id="case-priority" class="case-signal-value">—</div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+            <div class="case-signal">
+              <div class="case-signal-label">Priority</div>
+              <div id="case-priority" class="case-signal-value">—</div>
+            </div>
+            <div style="display:flex; gap:6px; align-items:center;">
+              <span style="font-size:10px; color:var(--muted); font-weight:800; letter-spacing:.05em;">STATUS</span>
+              <select id="case-status-select" class="triage-select">
+                <option value="open">Open</option>
+                <option value="investigating">Investigating</option>
+                <option value="contained">Contained</option>
+                <option value="closed">Closed</option>
+                <option value="false_positive">False Positive</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -542,6 +596,9 @@ INDEX = r'''<!doctype html>
           </button>
           <button class="tab" id="tab-compare"   role="tab" aria-controls="panel-compare"   aria-selected="false" data-tab="compare">
             <span class="tab-icon">📊</span> Alert Reduction
+          </button>
+          <button class="tab" id="tab-simulator" role="tab" aria-controls="panel-simulator" aria-selected="false" data-tab="simulator">
+            <span class="tab-icon">🛰️</span> Live Feeds &amp; Simulator
           </button>
           <button class="tab" id="tab-bob"        role="tab" aria-controls="panel-bob"       aria-selected="false" data-tab="bob">
             <span class="tab-icon">🤖</span> IBM Bob Handoff
@@ -581,6 +638,14 @@ INDEX = r'''<!doctype html>
                 <h2>Context to preserve</h2>
                 <div id="asset-context" class="asset-list"></div>
                 <div id="uncertainty-context" class="notice"></div>
+              </article>
+              <article class="card">
+                <p class="eyebrow">Analyst Triage &amp; Notes</p>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                  <h2>Investigation Log</h2>
+                  <button id="btn-save-notes" class="btn-sm">Save Notes</button>
+                </div>
+                <textarea id="case-notes-input" placeholder="Record investigation findings, hypotheses, containment actions..." style="width:100%;height:64px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:8px;font-size:12px;"></textarea>
               </article>
             </div>
           </div>
@@ -672,6 +737,41 @@ INDEX = r'''<!doctype html>
                 <li>Every score has provenance Bob can read</li>
               </ul>
             </article>
+          </div>
+        </section>
+
+        <!-- ── PANEL: SIMULATOR & FEEDS ── -->
+        <section id="panel-simulator" class="panel" role="tabpanel" aria-labelledby="tab-simulator">
+          <div class="split">
+            <div class="stack">
+              <article class="card card-glow-cyan">
+                <p class="eyebrow">Multi-Source Threat Ingestion</p>
+                <h2>Heterogeneous Feeds (SIEM, Satellite, Cyber, CTI)</h2>
+                <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">
+                  Ingest dynamic threat feeds to test automated candidate clustering, MITRE ATT&amp;CK sub-technique mapping, false-positive reduction, and commander BLUF generation in real time.
+                </p>
+                <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
+                  <button id="sim-sat-btn" class="action-btn">🛰️ Simulate Satellite Telemetry Breach</button>
+                  <button id="sim-benign-btn" class="action-btn">🛡️ Ingest Benign Routine Noise</button>
+                </div>
+                <div style="margin-top:12px;">
+                  <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px;">Custom Observation Ingestion (JSON):</label>
+                  <textarea id="custom-alert-json" style="width:100%;height:110px;font-family:ui-monospace,monospace;font-size:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px;" placeholder='{"source":"satellite_sensor", "host":"SAT-GROUND-01", "event_type":"downlink_anomaly", "detail":"SATCOM signal disruption and unauthorized command relay detected"}'></textarea>
+                  <div style="margin-top:8px;display:flex;gap:10px;">
+                    <button id="btn-ingest-custom" class="action-btn primary">Ingest Observation</button>
+                    <button id="btn-recorrelate" class="action-btn">Force Re-Correlation</button>
+                  </div>
+                </div>
+              </article>
+            </div>
+            <div class="stack">
+              <article class="card">
+                <p class="eyebrow">Operational Stream</p>
+                <h2>Recent Ingested Telemetry</h2>
+                <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Raw records stored in SQLite with full provenance preservation.</p>
+                <div id="sim-recent-stream" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;"></div>
+              </article>
+            </div>
           </div>
         </section>
 
@@ -891,11 +991,17 @@ INDEX = r'''<!doctype html>
 
       document.getElementById('uncertainty-context').textContent = brief.uncertainty;
 
+      const statusSelect = document.getElementById('case-status-select');
+      if (statusSelect) statusSelect.value = inc.status || 'open';
+      const notesInput = document.getElementById('case-notes-input');
+      if (notesInput) notesInput.value = inc.analyst_notes || '';
+
       renderTimeline('overview-timeline', inc.evidence.slice(0, 5));
       renderFilters();
       renderTimeline('full-timeline', inc.evidence);
       renderBrief();
       renderBob();
+      updateRecentStream();
     }
 
     function renderTimeline(targetId, records) {
@@ -939,7 +1045,15 @@ INDEX = r'''<!doctype html>
         ['Actor context', brief.actor_assessment],
         ['Uncertainty & visibility gaps', brief.uncertainty],
       ];
-      document.getElementById('brief-content').innerHTML = sections.map(([label, value]) =>
+
+      const blufBanner = brief.commander_briefing
+        ? `<div style="background:var(--cyan-dim);border:1px solid rgba(0,212,255,.3);border-radius:10px;padding:14px;margin-bottom:16px;">
+            <div style="font-size:10px;font-weight:800;color:var(--cyan);letter-spacing:.08em;margin-bottom:6px;text-transform:uppercase;">Commander Decision Briefing (BLUF)</div>
+            <div style="font-size:13px;color:var(--text);font-weight:600;line-height:1.5;">${esc(brief.commander_briefing)}</div>
+          </div>`
+        : '';
+
+      document.getElementById('brief-content').innerHTML = blufBanner + sections.map(([label, value]) =>
         `<section class="brief-section">
           <div class="brief-label">${esc(label)}</div>
           <div class="brief-text">${esc(value)}</div>
@@ -958,7 +1072,8 @@ INDEX = r'''<!doctype html>
 
     function briefText() {
       const brief = selected.bluf;
-      return `# Commander Brief — ${selected.id}\n\n## Bottom line\n${brief.bottom_line}\n\n## Assessment\n${brief.assessment}\n\n## Actor context\n${brief.actor_assessment}\n\n## Uncertainty\n${brief.uncertainty}\n\n## Recommended actions\n${brief.recommended_actions.map((a, i) => `${i + 1}. ${a}`).join('\n')}`;
+      const blufHeader = brief.commander_briefing ? `> **BLUF**: ${brief.commander_briefing}\n\n` : '';
+      return `# Commander Brief — ${selected.id}\n\n${blufHeader}## Bottom line\n${brief.bottom_line}\n\n## Assessment\n${brief.assessment}\n\n## Actor context\n${brief.actor_assessment}\n\n## Uncertainty\n${brief.uncertainty}\n\n## Recommended actions\n${brief.recommended_actions.map((a, i) => `${i + 1}. ${a}`).join('\n')}`;
     }
 
     async function copyText(text, success) {
@@ -1006,36 +1121,33 @@ INDEX = r'''<!doctype html>
         b.addEventListener('click', () => runTool(b.dataset.tool)));
     }
 
-    async function runTool(tool) {
-      const output = document.getElementById('tool-output');
-      output.textContent = `Retrieving ${tool}…`;
+    async function runTool(toolName) {
+      const out = document.getElementById('tool-output');
+      out.textContent = 'Calling MCP tool…';
       try {
-        const params = new URLSearchParams({ tool, incident_id: selected.id });
-        const res = await fetch('/api/mcp-query?' + params.toString());
-        const payload = await res.json();
-        output.textContent = JSON.stringify(payload, null, 2);
+        const res = await fetch(`/api/mcp-query?tool=${encodeURIComponent(toolName)}&incident_id=${encodeURIComponent(selected.id)}`);
+        const data = await res.json();
+        out.textContent = JSON.stringify(data, null, 2);
       } catch (e) {
-        output.textContent = `Unable to retrieve tool output: ${e.message}`;
+        out.textContent = 'Error: ' + e.message;
       }
     }
 
-    // ── SEARCH ──
     async function runSearch() {
       const q = document.getElementById('search-input').value.trim();
-      if (!q) return;
       const resultsEl = document.getElementById('search-results');
-      resultsEl.innerHTML = '<div class="search-no-results loading-pulse">Searching…</div>';
+      if (!q) { resultsEl.classList.remove('open'); return; }
+      resultsEl.innerHTML = '<div class="search-loading">Searching indicators…</div>';
       resultsEl.classList.add('open');
       try {
-        const params = new URLSearchParams({ tool: 'search_indicators', query: q });
-        const res = await fetch('/api/mcp-query?' + params.toString());
+        const res = await fetch(`/api/mcp-query?tool=search_indicators&query=${encodeURIComponent(q)}`);
         const data = await res.json();
         if (!data.matches || !data.matches.length) {
-          resultsEl.innerHTML = `<div class="search-no-results">No matches found for "${esc(q)}"</div>`;
+          resultsEl.innerHTML = `<div class="search-no-results">No matches for "${esc(q)}" across raw telemetry.</div>`;
           return;
         }
         resultsEl.innerHTML = data.matches.map(m =>
-          `<div class="search-result-item">
+          `<div class="search-result-item" data-record-id="${esc(m.record_id)}">
             <div class="search-result-id">${esc(m.record_id)}</div>
             <div class="search-result-snippet">${esc(m.matched_snippet)}</div>
             <div class="search-result-ts">${esc(m.timestamp || '')} · ${sourceBadge(m.source || '')}</div>
@@ -1047,6 +1159,139 @@ INDEX = r'''<!doctype html>
         resultsEl.innerHTML = `<div class="search-no-results">Search error: ${esc(e.message)}</div>`;
       }
     }
+
+    async function updateRecentStream() {
+      const el = document.getElementById('sim-recent-stream');
+      if (!el) return;
+      try {
+        const res = await fetch('/api/alerts?limit=6');
+        if (!res.ok) return;
+        const data = await res.json();
+        el.innerHTML = (data.alerts || []).map(a =>
+          `<div style="padding:8px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+              <strong style="color:var(--cyan);font-size:11px;">${esc(a._id || a.id)}</strong>
+              ${sourceBadge(a.source)}
+            </div>
+            <div style="font-size:11px;color:var(--text);">${esc(a.detail || a.text || a.event_type || 'event')}</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px;">${esc(a.timestamp)} ${a.host ? '· ' + esc(a.host) : ''}</div>
+          </div>`).join('');
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Dynamic event listeners
+    document.getElementById('case-status-select').addEventListener('change', async (e) => {
+      if (!selected) return;
+      const newStatus = e.target.value;
+      try {
+        const res = await fetch('/api/incidents/' + encodeURIComponent(selected.id), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus }),
+        });
+        if (res.ok) setStatus(`Incident ${selected.id} status updated to ${newStatus}.`);
+      } catch (err) {
+        setStatus('Failed to update status: ' + err.message, true);
+      }
+    });
+
+    document.getElementById('btn-save-notes').addEventListener('click', async () => {
+      if (!selected) return;
+      const notes = document.getElementById('case-notes-input').value;
+      try {
+        const res = await fetch('/api/incidents/' + encodeURIComponent(selected.id), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ analyst_notes: notes }),
+        });
+        if (res.ok) setStatus(`Analyst notes for ${selected.id} saved.`);
+      } catch (err) {
+        setStatus('Failed to save notes: ' + err.message, true);
+      }
+    });
+
+    document.getElementById('btn-open-sim').addEventListener('click', () => switchTab('simulator'));
+
+    document.getElementById('sim-sat-btn').addEventListener('click', async () => {
+      setStatus('Simulating Satellite Telemetry Breach feed…');
+      try {
+        const res = await fetch('/api/simulate-feed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scenario: 'satellite_ground_breach' }),
+        });
+        const data = await res.json();
+        setStatus(`Simulated satellite feed: ${data.inserted_records} records ingested. Re-correlating…`);
+        await boot();
+      } catch (err) {
+        setStatus('Simulation failed: ' + err.message, true);
+      }
+    });
+
+    document.getElementById('sim-benign-btn').addEventListener('click', async () => {
+      setStatus('Ingesting Benign Routine Telemetry…');
+      try {
+        const res = await fetch('/api/simulate-feed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scenario: 'benign_admin_noise' }),
+        });
+        const data = await res.json();
+        setStatus(`Ingested ${data.inserted_records} benign alerts. Filtered by negative evidence checks.`);
+        await boot();
+      } catch (err) {
+        setStatus('Ingestion failed: ' + err.message, true);
+      }
+    });
+
+    document.getElementById('btn-ingest-custom').addEventListener('click', async () => {
+      const raw = document.getElementById('custom-alert-json').value.trim();
+      if (!raw) return;
+      try {
+        const alertObj = JSON.parse(raw);
+        setStatus('Ingesting custom observation…');
+        const res = await fetch('/api/alerts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(alertObj),
+        });
+        if (!res.ok) throw new Error('Ingestion rejected');
+        setStatus('Observation successfully ingested and correlated.');
+        document.getElementById('custom-alert-json').value = '';
+        await boot();
+      } catch (err) {
+        setStatus('Custom ingest error: ' + err.message, true);
+      }
+    });
+
+    document.getElementById('btn-recorrelate').addEventListener('click', async () => {
+      setStatus('Executing full re-correlation over database…');
+      try {
+        const res = await fetch('/api/recorrelate', { method: 'POST' });
+        if (res.ok) {
+          setStatus('Re-correlation complete.');
+          await boot();
+        }
+      } catch (err) {
+        setStatus('Re-correlation failed: ' + err.message, true);
+      }
+    });
+
+    document.getElementById('btn-reset-demo').addEventListener('click', async () => {
+      if (!confirm('Reset all database tables to the default 62 demo alerts?')) return;
+      setStatus('Resetting database to baseline demo state…');
+      try {
+        const res = await fetch('/api/reset', { method: 'POST' });
+        if (res.ok) {
+          setStatus('Database restored to 62 demo alerts.');
+          await boot();
+        }
+      } catch (err) {
+        setStatus('Reset failed: ' + err.message, true);
+      }
+    });
 
     document.getElementById('search-btn').addEventListener('click', runSearch);
     document.getElementById('search-input').addEventListener('keydown', e => { if (e.key === 'Enter') runSearch(); });
@@ -1067,8 +1312,41 @@ INDEX = r'''<!doctype html>
 </html>'''
 
 
+def get_dynamic_analysis() -> dict[str, Any]:
+    db_file = ROOT / "src" / "data" / "threatfusion.db"
+    records = None
+    assets = None
+    if db_file.exists():
+        try:
+            records = get_all_alerts(db_file)
+            assets = get_assets(db_file)
+        except Exception:
+            records = None
+            assets = None
+    analysis = analyze(ROOT, records=records, assets=assets)
+    if db_file.exists():
+        try:
+            save_incidents(analysis["incidents"], db_file)
+        except Exception:
+            pass
+    return analysis
+
+
 def _with_presentation_fields(incident: dict) -> dict:
-    """Add derived read-only presentation fields without changing engine state."""
+    """Add derived presentation and triage fields without changing engine math."""
+    db_file = ROOT / "src" / "data" / "threatfusion.db"
+    status = "open"
+    notes = ""
+    if db_file.exists():
+        try:
+            db_item = db_get_incident(incident["id"], db_file)
+            if db_item:
+                status = db_item.get("status", "open")
+                notes = db_item.get("analyst_notes", "")
+        except Exception:
+            pass
+    incident["status"] = status
+    incident["analyst_notes"] = notes
     incident["bluf"] = bluf(incident)
     incident["runbook"] = remediation_runbook(incident)
     return incident
@@ -1081,13 +1359,19 @@ def index() -> str:
 
 @app.get("/healthz")
 def healthz() -> dict:
-    return {"status": "ok", "service": "threatfusion", "version": app.version}
+    db_file = ROOT / "src" / "data" / "threatfusion.db"
+    return {
+        "status": "ok",
+        "service": "threatfusion",
+        "version": app.version,
+        "database": "sqlite_ready" if db_file.exists() else "in_memory_only",
+    }
 
 
 @app.get("/api/summary")
 def summary() -> dict:
     try:
-        analysis = analyze(ROOT)
+        analysis = get_dynamic_analysis()
     except Exception as exc:
         logger.exception("Analysis failed")
         raise HTTPException(status_code=500, detail=f"Analysis error: {exc}") from exc
@@ -1109,7 +1393,7 @@ def summary() -> dict:
 @app.get("/api/incidents/{incident_id}")
 def incident(incident_id: str) -> dict:
     try:
-        analysis = analyze(ROOT)
+        analysis = get_dynamic_analysis()
     except Exception as exc:
         logger.exception("Analysis failed")
         raise HTTPException(status_code=500, detail=f"Analysis error: {exc}") from exc
@@ -1121,13 +1405,9 @@ def incident(incident_id: str) -> dict:
 
 @app.get("/api/candidates")
 def candidates() -> dict:
-    """Return all candidate hypotheses, including those that were NOT promoted.
-
-    Each candidate includes which promotion checks it passed/failed, so the UI
-    can show exactly why a hypothesis was held below the promotion boundary.
-    """
+    """Return all candidate hypotheses, including those that were NOT promoted."""
     try:
-        analysis = analyze(ROOT)
+        analysis = get_dynamic_analysis()
     except Exception as exc:
         logger.exception("Analysis failed")
         raise HTTPException(status_code=500, detail=f"Analysis error: {exc}") from exc
@@ -1149,9 +1429,209 @@ def candidates() -> dict:
     return {"candidates": result, "promoted_count": len(promoted_ids), "total_candidates": len(result)}
 
 
+@app.post("/api/alerts")
+def create_alert(payload: dict) -> dict:
+    """Dynamically ingest a single observation from SIEM, Satellite feed, Cyber sensor, or CTI."""
+    try:
+        inserted = insert_alert(payload)
+        clear_context_cache()
+        analysis = get_dynamic_analysis()
+        return {
+            "status": "ok",
+            "alert": inserted,
+            "total_alerts": len(analysis["records"]),
+            "candidate_clusters": len(analysis["incidents"]),
+            "promoted_incidents": len(promoted_incidents(analysis)),
+        }
+    except Exception as exc:
+        logger.exception("Ingest alert failed")
+        raise HTTPException(status_code=400, detail=f"Invalid alert payload: {exc}") from exc
+
+
+@app.post("/api/alerts/bulk")
+def bulk_create_alerts(payload: list[dict]) -> dict:
+    """Dynamically ingest a batch of heterogeneous feed observations."""
+    try:
+        count = insert_alerts_bulk(payload)
+        clear_context_cache()
+        analysis = get_dynamic_analysis()
+        return {
+            "status": "ok",
+            "inserted_count": count,
+            "total_alerts": len(analysis["records"]),
+            "promoted_incidents": len(promoted_incidents(analysis)),
+        }
+    except Exception as exc:
+        logger.exception("Bulk ingest failed")
+        raise HTTPException(status_code=400, detail=f"Bulk ingest error: {exc}") from exc
+
+
+@app.get("/api/alerts")
+def list_alerts(
+    limit: int = 50,
+    offset: int = 0,
+    source: str | None = None,
+    host: str | None = None,
+    search: str | None = None,
+) -> dict:
+    """Retrieve paginated and filtered raw feed observations."""
+    alerts, total = query_alerts(limit=limit, offset=offset, source=source, host=host, search=search)
+    return {"alerts": alerts, "total": total, "limit": limit, "offset": offset}
+
+
+@app.get("/api/assets")
+def list_assets() -> dict:
+    """Retrieve all registered mission-critical and corporate assets."""
+    return {"assets": get_assets()}
+
+
+@app.post("/api/assets")
+def update_asset(payload: dict) -> dict:
+    """Create or update asset criticality and mission profile in the inventory."""
+    host = payload.get("host")
+    if not host:
+        raise HTTPException(status_code=400, detail="Missing required 'host' field")
+    crit = int(payload.get("criticality", 50))
+    role = payload.get("mission_role", "Standard system")
+    zone = payload.get("zone", "corporate")
+    res = upsert_asset(host, crit, role, zone)
+    clear_context_cache()
+    return {"status": "ok", "asset": res}
+
+
+@app.delete("/api/assets/{host}")
+def remove_asset(host: str) -> dict:
+    """Remove an asset from the inventory."""
+    ok = delete_asset(host)
+    clear_context_cache()
+    return {"status": "ok", "deleted": ok}
+
+
+@app.patch("/api/incidents/{incident_id}")
+def update_incident(incident_id: str, payload: dict) -> dict:
+    """Update analyst triage status (open, investigating, contained, closed, false_positive) or notes."""
+    status = payload.get("status")
+    notes = payload.get("analyst_notes")
+    res = update_incident_triage(incident_id, status=status, analyst_notes=notes)
+    if not res:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return {"status": "ok", "incident": res}
+
+
+@app.post("/api/recorrelate")
+def recorrelate() -> dict:
+    """Force re-correlation of all database alerts against MITRE ATT&CK reference."""
+    clear_context_cache()
+    analysis = get_dynamic_analysis()
+    promoted = promoted_incidents(analysis)
+    return {
+        "status": "ok",
+        "raw_records": len(analysis["records"]),
+        "candidate_clusters": len(analysis["incidents"]),
+        "promoted_incidents": len(promoted),
+    }
+
+
+@app.post("/api/reset")
+def reset_demo() -> dict:
+    """Reset database back to the baseline 62 demo alerts and initial asset context."""
+    reset_db(root_dir=ROOT)
+    clear_context_cache()
+    analysis = get_dynamic_analysis()
+    promoted = promoted_incidents(analysis)
+    return {
+        "status": "ok",
+        "message": "Database reset to baseline demo telemetry and asset definitions.",
+        "raw_records": len(analysis["records"]),
+        "candidate_clusters": len(analysis["incidents"]),
+        "promoted_incidents": len(promoted),
+    }
+
+
+@app.post("/api/simulate-feed")
+def simulate_feed(payload: dict) -> dict:
+    """Simulate incoming multi-source attack feeds (Satellite sensor, cyber sensors, SIEM)."""
+    scenario = payload.get("scenario", "satellite_ground_breach")
+    from datetime import datetime, timezone
+
+    now_iso = datetime.now(timezone.utc).isoformat()
+
+    if scenario == "satellite_ground_breach":
+        sim_records = [
+            {
+                "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-1",
+                "timestamp": now_iso,
+                "source": "satellite_sensor",
+                "event_type": "downlink_telemetry_anomaly",
+                "host": "SATCOM-GW02",
+                "src_ip": "198.51.100.45",
+                "dst_ip": "10.40.2.1",
+                "detail": "SATCOM ground terminal downlink telemetry anomaly: unexpected telemetry relay command received.",
+            },
+            {
+                "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-2",
+                "timestamp": now_iso,
+                "source": "network_sensor",
+                "event_type": "lateral_remote_session",
+                "protocol": "RDP",
+                "dst_port": 3389,
+                "src_host": "SATCOM-GW02",
+                "dst_host": "SAT-GROUND-01",
+                "detail": "Unauthorized lateral Remote Desktop Protocol session initiated from satellite gateway to satellite ground station.",
+            },
+            {
+                "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-3",
+                "timestamp": now_iso,
+                "source": "endpoint",
+                "event_type": "process_injection",
+                "host": "SAT-GROUND-01",
+                "process": "powershell.exe",
+                "parent_process": "winword.exe",
+                "cmdline": "powershell.exe -enc JABzAGEAdAA9...",
+                "detail": "Encoded PowerShell execution launched by document process targeting satellite command bus.",
+            },
+        ]
+    elif scenario == "benign_admin_noise":
+        sim_records = [
+            {
+                "_id": f"SIM-BENIGN-{int(datetime.now().timestamp())}-1",
+                "timestamp": now_iso,
+                "source": "endpoint",
+                "event_type": "antivirus_scan_clean",
+                "host": "FIN-LT22",
+                "user": "corporate_user",
+                "detail": "Daily scheduled antivirus scan completed with zero threats identified.",
+            },
+            {
+                "_id": f"SIM-BENIGN-{int(datetime.now().timestamp())}-2",
+                "timestamp": now_iso,
+                "source": "endpoint",
+                "event_type": "process_execution",
+                "host": "FIN-LT22",
+                "process": "powershell.exe",
+                "parent_process": "explorer.exe",
+                "detail": "Interactive PowerShell session launched by known admin without suspicious parameters.",
+            },
+        ]
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown scenario preset: {scenario}")
+
+    inserted = insert_alerts_bulk(sim_records)
+    clear_context_cache()
+    analysis = get_dynamic_analysis()
+    promoted = promoted_incidents(analysis)
+    return {
+        "status": "ok",
+        "scenario": scenario,
+        "inserted_records": inserted,
+        "total_alerts": len(analysis["records"]),
+        "promoted_incidents": len(promoted),
+    }
+
+
 @app.get("/api/evaluation")
 def evaluation() -> dict:
-    analysis = analyze(ROOT)
+    analysis = get_dynamic_analysis()
     return {
         "engine_version": analysis["metadata"]["engine_version"],
         "attack_kb_version": analysis["metadata"]["attack_kb_version"],

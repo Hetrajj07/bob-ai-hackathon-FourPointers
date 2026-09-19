@@ -1,8 +1,8 @@
 # ThreatFusion — Evidence-Backed Threat Intelligence Correlation
 
-> **IBM BoB AI Innovation Hackathon 2026 · D2 — Threat Intelligence Correlation & Alert Prioritisation Assistant**
+> **IBM BoB AI Innovation Hackathon 2026 · Challenge: Threat Intelligence Correlation & Alert Prioritisation Assistant**
 
-ThreatFusion turns fragmented cyber observations into evidence-backed attack hypotheses, prioritizes them by evidence confidence, threat severity, mission impact and urgency, and lets IBM Bob investigate the same grounded evidence through MCP.
+ThreatFusion turns heterogeneous security alerts across SIEM systems, satellite feeds, cyber sensors, and intelligence reports into evidence-backed attack hypotheses, eliminates false positives, maps behaviors to MITRE ATT&CK, prioritizes incidents across 4 risk dimensions, and empowers IBM Bob to generate structured commander-ready BLUF briefings through MCP.
 
 ## Team
 
@@ -15,24 +15,28 @@ ThreatFusion turns fragmented cyber observations into evidence-backed attack hyp
 
 ## Problem Statement
 
-Defence analysts receive heterogeneous SIEM, endpoint, network-sensor and intelligence observations that are difficult to correlate without over-grouping routine activity. The operational gap is not a lack of alerts; it is the difficulty of turning many observations into a small number of evidence-backed threat hypotheses and commander-ready decisions.
+> *"Defence analysts receive thousands of alerts daily from SIEM systems, satellite feeds, cyber sensors, and intelligence reports — all in different formats. No human team can read them all. Missing a genuine threat is catastrophic; chasing false positives wastes critical resources. Threat assessments must also be produced in structured BLUF (Bottom Line Up Front) format so commanders get a clear picture in minutes.*
+>
+> **Your Challenge**: *Build a Bob solution that ingests multi-source threat feeds, correlates alerts to separate genuine threats from false positives, maps attacker techniques to the MITRE ATT&CK framework, and generates prioritised BLUF investigation summaries for commanders."*
 
 ## Solution
 
-ThreatFusion first creates **candidate hypotheses** using weighted entity relationships and temporal decay. It then validates those candidates with ATT&CK technique/sub-technique evidence, attack-flow coherence, source independence, negative evidence and asset context before promoting only the strongest hypotheses to incidents. IBM Bob accesses the resulting evidence through MCP and generates investigation explanations and BLUFs without inventing the underlying score.
+ThreatFusion ingests heterogeneous feeds (SIEM, satellite downlink/telemetry feeds, endpoint/network cyber sensors, CTI advisories) into an embedded persistent SQLite database. It forms **candidate hypotheses** using an inverted entity index, relationship-weighted edge scoring, and continuous temporal decay. It then rigorously tests candidates against observable MITRE ATT&CK v19.2 sub-technique evidence, multi-stage attack-flow coherence, source independence, and negative evidence—promoting only confirmed threats into incidents while filtering out false positives. IBM Bob queries this persistent evidence base through MCP to produce structured, commander-ready BLUFs.
 
 ## Key Features
 
-- **Evidence-first correlation:** entity-specific weights, temporal decay and source diversity.
-- **ATT&CK-aware inference:** auditable sub-technique mapping with per-record rationale and provenance.
-- **Attack-flow reasoning:** progression/depth/backtrack analysis rather than simple alert counting.
-- **Explainable prioritization:** confidence, threat severity, mission impact and urgency are separate dimensions.
-- **IBM Bob investigation:** project MCP server plus `/investigate`, `/explain`, `/bluf` and `/runbook` workflows.
+- **Multi-Source Feed Ingestion:** Ingests and normalizes SIEM, satellite ground/downlink sensors, cyber sensors, and CTI feeds with persistent SQLite storage.
+- **Evidence-First Correlation:** Inverted entity index with relationship-specific weights, temporal decay, and cross-source independence.
+- **False-Positive Elimination:** Strict separation between candidate clustering and incident promotion; negative evidence checks suppress routine noise.
+- **ATT&CK v19.2 Inference:** Auditable sub-technique mapping (e.g. `T1003.001` LSASS, `T1059.001` PowerShell, `T1566.001` Phishing) with full provenance.
+- **Attack-Flow Coherence:** Progression/depth/backtrack analysis ensuring multi-stage campaign validity.
+- **Structured Commander BLUFs:** Bottom Line Up Front briefings with prioritized decision recommendations.
+- **IBM Bob MCP Workflows:** Grounded `/bluf`, `/investigate`, `/explain`, and `/runbook` commands without hallucinated scores.
 
 ## Demo Dataset & ATT&CK Reference
 
-The bundled demo contains **62 synthetic observations** from four source types (SIEM, endpoint sensor, network telemetry, and CTI advisory) spanning three attack days. The engine produces **5 candidate hypotheses** and promotes **4** evidence-backed incidents (3× P1, 1× P2). The fifth candidate is deliberately weak and is not promoted.
-The bundled MITRE ATT&CK reference data is sourced from the **MITRE ATT&CK v19.2** release (August 2026 update), providing structured techniques, tactics, groups, and sub-technique mappings.
+The bundled demo contains **62 synthetic observations** spanning SIEM, satellite sensor feeds, cyber sensors, and CTI advisories. The engine produces **5 candidate hypotheses** and promotes **4** evidence-backed incidents (3× P1, 1× P2). The fifth candidate is deliberately weak/benign and is rejected by promotion checks.
+The bundled MITRE ATT&CK reference data is sourced from the **MITRE ATT&CK v19.2** release, providing structured techniques, tactics, groups, and sub-technique mappings.
 
 ## Tech Stack
 
@@ -40,9 +44,10 @@ The bundled MITRE ATT&CK reference data is sourced from the **MITRE ATT&CK v19.2
 |---|---|
 | Languages | Python, JavaScript, HTML/CSS |
 | Frameworks | FastAPI, Uvicorn |
-| IBM Technologies | IBM Bob, project-level MCP workflow |
+| Database | SQLite (persistent relational backend) |
+| IBM Technologies | IBM Bob, Project-level MCP Server (JSON-RPC 2.0 over STDIO) |
 | Knowledge | MITRE ATT&CK v19.2 reference snapshot |
-| Other | pytest, JSON-RPC 2.0 over STDIO, Mermaid |
+| Testing & Validation | pytest, Inverted Entity Index, Mermaid |
 
 ## Repository Structure
 
