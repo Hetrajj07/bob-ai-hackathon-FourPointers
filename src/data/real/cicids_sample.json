@@ -1,0 +1,50 @@
+[
+  {
+    "FlowID": "10.40.2.15-185.214.66.91-51234-443-6",
+    "SourceIp": "10.40.2.15",
+    "SourcePort": 51234,
+    "DestinationIp": "185.214.66.91",
+    "DestinationPort": 443,
+    "Protocol": "TCP",
+    "Timestamp": "2026-09-18T14:28:40Z",
+    "FlowDuration": 12450000,
+    "TotalFwdPackets": 142,
+    "TotalBwdPackets": 98,
+    "TotalLengthOfFwdPackets": 8450,
+    "TotalLengthOfBwdPackets": 12800,
+    "Label": "Botnet-C2-Beaconing",
+    "SensorHost": "NET-PROBE-CORE01"
+  },
+  {
+    "FlowID": "10.40.2.15-10.40.1.5-53412-3389-6",
+    "SourceIp": "10.40.2.15",
+    "SourcePort": 53412,
+    "DestinationIp": "10.40.1.5",
+    "DestinationPort": 3389,
+    "Protocol": "TCP",
+    "Timestamp": "2026-09-18T14:35:05Z",
+    "FlowDuration": 890000,
+    "TotalFwdPackets": 32,
+    "TotalBwdPackets": 28,
+    "TotalLengthOfFwdPackets": 3410,
+    "TotalLengthOfBwdPackets": 2180,
+    "Label": "Lateral-RDP",
+    "SensorHost": "NET-PROBE-CORE01"
+  },
+  {
+    "FlowID": "198.51.100.45-10.40.2.1-41002-22-6",
+    "SourceIp": "198.51.100.45",
+    "SourcePort": 41002,
+    "DestinationIp": "10.40.2.1",
+    "DestinationPort": 22,
+    "Protocol": "TCP",
+    "Timestamp": "2026-09-18T14:40:10Z",
+    "FlowDuration": 45000,
+    "TotalFwdPackets": 8,
+    "TotalBwdPackets": 6,
+    "TotalLengthOfFwdPackets": 640,
+    "TotalLengthOfBwdPackets": 420,
+    "Label": "SSH-Patator",
+    "SensorHost": "NET-PROBE-PERIMETER"
+  }
+]

@@ -1,0 +1,28 @@
+# Exclude large/generated/secret paths from IBM Bob's workspace context.
+# See: https://bob.ibm.com/docs/ide/security/bob-security-guidance
+
+# Python artefacts
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Secrets
+.env
+.env.*
+secrets/
+
+# Version control internals
+.git/
+
+# Large binary / media files
+demo/ThreatFusion_demo.mp4
+demo/screenshots/
+
+# Temporary files
+tmp/
+*.tmp

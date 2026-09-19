@@ -33,6 +33,9 @@ TACTIC_RANK = {t: i for i, t in enumerate(TACTIC_ORDER)}
 SOURCE_CREDIBILITY = {
     "threat_intel_report": 0.92,
     "endpoint": 0.90,
+    "satellite_sensor": 0.88,
+    "satellite_telemetry": 0.88,
+    "satcom_sensor": 0.88,
     "network_sensor": 0.84,
     "siem": 0.78,
 }
@@ -51,6 +54,9 @@ ASSET_DEFAULTS = {
     "ENG-WKS17": {"criticality": 82, "mission_role": "Engineering workstation", "zone": "engineering"},
     "VPN-GW01": {"criticality": 90, "mission_role": "Remote access gateway", "zone": "perimeter"},
     "FIN-LT22": {"criticality": 58, "mission_role": "Finance endpoint", "zone": "corporate"},
+    "SAT-GROUND-01": {"criticality": 96, "mission_role": "Satellite ground control station", "zone": "mission-critical"},
+    "SATCOM-GW02": {"criticality": 92, "mission_role": "Tactical satellite communication gateway", "zone": "perimeter"},
+    "DEF-CMD-HQ01": {"criticality": 98, "mission_role": "Defence command headquarters hub", "zone": "mission-critical"},
 }
 
 TECHNIQUE_RISK = {
@@ -89,6 +95,7 @@ __all__ = [
     "score_cluster",
     "tag_technique",
     "temporal_decay",
+    "_cluster_span_minutes",
 ]
 
 IOC_RE = re.compile(r"\b(?:\d{1,3}\.){3}\d{1,3}\b")
@@ -131,7 +138,16 @@ def load_context(root_str: str):
     records = load_json(data / "demo_alerts.json")
     assets_path = data / "assets.json"
     assets = load_json(assets_path) if assets_path.exists() else ASSET_DEFAULTS
-    techniques = {x["id"]: x for x in load_json(ref / "techniques.json")}
+    techniques = {}
+    for x in load_json(ref / "techniques.json"):
+        x["framework"] = "MITRE ATT&CK"
+        techniques[x["id"]] = x
+    sparta_file = ref / "sparta" / "sparta_techniques.json"
+    if sparta_file.exists():
+        sparta_data = load_json(sparta_file)
+        for st in sparta_data:
+            st["framework"] = "SPARTA"
+            techniques[st["id"]] = st
     groups = load_json(ref / "groups.json")
     edges = load_json(ref / "group_technique_edges.json")
     result = (records, techniques, groups, edges, assets)
@@ -146,7 +162,10 @@ def clear_context_cache() -> None:
 
 # Structural keys excluded from technique-matching to prevent false positives
 # (e.g. a record ID containing "lsass" should not trigger T1003.001).
-_TEXT_EXCLUDE_KEYS = frozenset({"_id", "format", "source", "timestamp", "attack_id_hint"})
+_TEXT_EXCLUDE_KEYS = frozenset({
+    "_id", "format", "source", "timestamp", "attack_id_hint", "rule_technique_hint",
+    "label", "dataset_label", "provenance_type", "dataset_name", "origin", "framework"
+})
 
 
 def text_of(r: dict[str, Any]) -> str:
@@ -219,6 +238,12 @@ def extract_entities(r: dict[str, Any]) -> list[tuple[str, str]]:
         for token in IOC_RE.findall(r.get("text", "")):
             ents.append(("ioc", _canonical_entity_value("ioc", token)))
 
+    # Real ThreatFox CTI matches are authoritative IOCs
+    if r.get("threatfox_match"):
+        tf_ioc = r["threatfox_match"].get("ioc")
+        if tf_ioc:
+            ents.append(("ioc", _canonical_entity_value("ioc", tf_ioc)))
+
     return list(dict.fromkeys(ents))
 
 
@@ -288,7 +313,29 @@ def edge_strength(a: dict[str, Any], b: dict[str, Any], max_minutes: float = 90.
     return strength, reasons
 
 
-def candidate_clusters(norm: list[dict[str, Any]], threshold: float = 0.38) -> list[list[dict[str, Any]]]:
+def _cluster_span_minutes(cluster: list[dict[str, Any]]) -> float:
+    """Return the total time span of a cluster in minutes (first → last event)."""
+    timestamps = [parse_ts(r["timestamp"]) for r in cluster]
+    if len(timestamps) < 2:
+        return 0.0
+    return (max(timestamps) - min(timestamps)).total_seconds() / 60.0
+
+
+def candidate_clusters(
+    norm: list[dict[str, Any]],
+    threshold: float = 0.38,
+    max_span_minutes: float = 480.0,
+) -> list[list[dict[str, Any]]]:
+    """Build candidate hypotheses using entity/time correlation.
+
+    Two-stage process:
+    1. DSU edge-based union: pairs within max_minutes (90) and above the edge
+       strength threshold are joined. This is efficient but can produce
+       transitive chains where the first and last event are far apart.
+    2. Cluster-level span check: after union, any cluster whose total time span
+       exceeds max_span_minutes (default 8 hours) is split into sub-windows.
+       This prevents slow chaining attacks from collapsing into one giant cluster.
+    """
     d = DSU()
     for r in norm:
         d.find(r["id"])
@@ -316,13 +363,38 @@ def candidate_clusters(norm: list[dict[str, Any]], threshold: float = 0.38) -> l
     groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for r in norm:
         groups[d.find(r["id"])].append(r)
-    return [sorted(v, key=lambda x: x["timestamp"]) for v in groups.values() if len(v) > 1]
+    raw_clusters = [sorted(v, key=lambda x: x["timestamp"]) for v in groups.values() if len(v) > 1]
+
+    # Stage 2: split clusters whose total span exceeds max_span_minutes into
+    # sequential sub-windows. Each sub-window starts a new window when the gap
+    # to the current window start would exceed max_span_minutes.
+    result = []
+    for cluster in raw_clusters:
+        if _cluster_span_minutes(cluster) <= max_span_minutes:
+            result.append(cluster)
+            continue
+        # Greedy sequential split: slide a window forward.
+        window: list[dict[str, Any]] = [cluster[0]]
+        window_start = parse_ts(cluster[0]["timestamp"])
+        for record in cluster[1:]:
+            record_ts = parse_ts(record["timestamp"])
+            if (record_ts - window_start).total_seconds() / 60.0 > max_span_minutes:
+                if len(window) > 1:
+                    result.append(window)
+                window = [record]
+                window_start = record_ts
+            else:
+                window.append(record)
+        if len(window) > 1:
+            result.append(window)
+    return result
 
 
 def tag_technique(r: dict[str, Any], techniques: dict[str, Any]) -> tuple[str | None, float, str | None]:
     t = text_of(r)
     hinted = r.get("attack_id_hint")
-    if hinted in techniques:
+    # Only trust direct CTI technique references from threat_intel feeds; do not blindly trust endpoint rule hints
+    if hinted and r.get("source") == "threat_intel" and hinted in techniques:
         return hinted, 0.95, "explicit CTI technique reference"
     if "spearphishing attachment" in t or r.get("event_type") == "email_attachment_opened" or ("attachment" in t and "winword" in t):
         return "T1566.001", 0.90, "attachment-based phishing behavior"
@@ -338,6 +410,20 @@ def tag_technique(r: dict[str, Any], techniques: dict[str, Any]) -> tuple[str | 
         return "T1021.002", 0.86, "SMB/admin-share evidence"
     if r.get("protocol", "").upper() == "SSH" or (r.get("dst_port") == 22 and r.get("source") == "network_sensor"):
         return "T1021.004", 0.82, "SSH transport evidence"
+
+    # SPARTA Space-Cyber TTP inference (strictly separated from ATT&CK namespace)
+    sparta_hint = r.get("sparta_id")
+    if sparta_hint and sparta_hint in techniques:
+        return sparta_hint, 0.95, f"SPARTA Space-Cyber TTP: {techniques[sparta_hint].get('name')}"
+    if ("downlink" in t and "jamming" in t) and "SPARTA-IMP-0001" in techniques:
+        return "SPARTA-IMP-0001", 0.92, "SPARTA RF Downlink Jamming & Signal Degradation"
+    if ("command injection" in t and ("satellite" in t or "telemetry" in t)) and "SPARTA-EX-0001" in techniques:
+        return "SPARTA-EX-0001", 0.93, "SPARTA Command Injection via Telemetry Bus"
+    if ("rogue command" in t or "telemetry hijack" in t) and "SPARTA-C2-0001" in techniques:
+        return "SPARTA-C2-0001", 0.92, "SPARTA Rogue Command Uplink & Telemetry Hijacking"
+    if ("ground station" in t and "compromise" in t) and "SPARTA-IA-0001" in techniques:
+        return "SPARTA-IA-0001", 0.90, "SPARTA Compromise Ground Station Segment"
+
     return None, 0.0, None
 
 
@@ -361,6 +447,7 @@ def technique_events(cluster: list[dict[str, Any]], techniques: dict[str, Any]) 
             "timestamp": r["timestamp"],
             "technique": tid,
             "technique_name": techniques[tid].get("name", tid),
+            "framework": techniques[tid].get("framework", "MITRE ATT&CK"),
             "tactic": tactic,
             "tactic_rank": TACTIC_RANK[tactic],
             "confidence": conf,
@@ -370,8 +457,16 @@ def technique_events(cluster: list[dict[str, Any]], techniques: dict[str, Any]) 
 
 
 def attack_flow(tech_events: list[dict[str, Any]]) -> dict[str, Any]:
+    frameworks_present = sorted({e.get("framework", "MITRE ATT&CK") for e in tech_events})
     if len(tech_events) < 2:
-        return {"score": 0.0, "progression": 0.0, "depth": min(1.0, len(tech_events) / 4), "transitions": [], "unobserved_intermediate_tactics": []}
+        return {
+            "score": 0.0,
+            "progression": 0.0,
+            "depth": min(1.0, len(tech_events) / 4),
+            "transitions": [],
+            "unobserved_intermediate_tactics": [],
+            "frameworks": frameworks_present,
+        }
 
     strict_up = 0
     same = 0
@@ -415,6 +510,7 @@ def attack_flow(tech_events: list[dict[str, Any]]) -> dict[str, Any]:
         "backtracks": backtracks,
         "transitions": transitions,
         "unobserved_intermediate_tactics": unobserved,
+        "frameworks": frameworks_present,
     }
 
 
@@ -487,7 +583,10 @@ def actor_similarity(observed: list[str], edges: list[dict[str, Any]]) -> list[d
             counts[tid] += 1
             groups.add(g)
     N = max(1, len(groups))
-    obs = set(observed)
+    # Filter observed techniques to MITRE ATT&CK only (SPARTA techniques are not in ATT&CK actor profiles)
+    obs = {t for t in observed if not str(t).startswith("SPARTA-")}
+    if not obs:
+        return []
     out = []
     for g, tids in gtech.items():
         shared = tids & obs
@@ -541,7 +640,11 @@ def score_cluster(cluster: list[dict[str, Any]], techniques: dict[str, Any], edg
 
     tech_conf = (sum(e["confidence"] for e in tech_events) / len(tech_events)) if tech_events else 0.0
     behavior_severity = max([TECHNIQUE_RISK.get(e["technique"], 55) for e in tech_events] or [35])
-    source_quality = sum(max(r["source_credibility"] for r in cluster if r["source"] == src) for src in {r["source"] for r in cluster}) / max(1, len({r["source"] for r in cluster}))
+    unique_sources = {r["source"] for r in cluster}
+    source_quality = sum(
+        max((r["source_credibility"] for r in cluster if r["source"] == src), default=0.60)
+        for src in unique_sources
+    ) / max(1, len(unique_sources))
     corroboration = 0.45 * src_ind + 0.30 * source_coverage + 0.25 * source_quality
     # Explainable confidence: behavior + corroboration + IOC specificity - contradiction.
     raw_conf = 0.45 * tech_conf + 0.30 * flow["score"] + 0.18 * corroboration + 0.07 * ioc_specificity
@@ -553,6 +656,11 @@ def score_cluster(cluster: list[dict[str, Any]], techniques: dict[str, Any], edg
     priority_score = round(100 * (0.45 * confidence + 0.25 * severity / 100 + 0.20 * impact / 100 + 0.10 * urgency / 100))
     priority = "P1" if priority_score >= 82 else ("P2" if priority_score >= 65 else ("P3" if priority_score >= 45 else "P4"))
 
+    has_threatfox = any("threatfox_match" in r.get("raw", {}) for r in cluster)
+    has_sparta = any(str(e["technique"]).startswith("SPARTA-") for e in tech_events)
+    has_cisa_kev = any("cisa_kev_match" in r.get("raw", {}) for r in cluster)
+    frameworks_present = sorted({e.get("framework", "MITRE ATT&CK") for e in tech_events})
+
     evidence = []
     for r in cluster:
         tid, tc, why = tag_technique(r["raw"], techniques)
@@ -563,10 +671,17 @@ def score_cluster(cluster: list[dict[str, Any]], techniques: dict[str, Any], edg
             "summary": summarize_record(r["raw"]),
             "technique": tid,
             "technique_name": techniques[tid].get("name", tid) if tid else None,
+            "framework": techniques[tid].get("framework", "MITRE ATT&CK") if tid else None,
             "technique_confidence": tc,
             "technique_reason": why,
             "source_credibility": r["source_credibility"],
+            "provenance_type": r["raw"].get("provenance_type", "synthetic"),
+            "dataset_name": r["raw"].get("dataset_name", r["raw"].get("origin", "Synthetic Benchmark")),
         }
+        if "threatfox_match" in r.get("raw", {}):
+            provenance["threatfox_match"] = r["raw"]["threatfox_match"]
+        if "cisa_kev_match" in r.get("raw", {}):
+            provenance["cisa_kev_match"] = r["raw"]["cisa_kev_match"]
         if any(k == "ioc" for k, _ in r["entities"]):
             provenance["ioc_evidence"] = True
         evidence.append(provenance)
@@ -600,6 +715,16 @@ def score_cluster(cluster: list[dict[str, Any]], techniques: dict[str, Any], edg
         "asset_criticality": impact,
         "assets": asset_hits,
         "source_independence": src_ind,
+        "has_threatfox_corroboration": has_threatfox,
+        "has_sparta_taxonomy": has_sparta,
+        "has_cisa_kev_exploit": has_cisa_kev,
+        "frameworks_present": frameworks_present,
+        "provenance_summary": {
+            "synthetic_count": sum(1 for r in cluster if r["raw"].get("provenance_type", "synthetic") == "synthetic"),
+            "real_sample_count": sum(1 for r in cluster if r["raw"].get("provenance_type") == "real_sample"),
+            "live_feed_count": sum(1 for r in cluster if r["raw"].get("provenance_type") == "live_feed"),
+            "datasets": sorted({r["raw"].get("dataset_name", r["raw"].get("origin", "Synthetic Benchmark")) for r in cluster}),
+        },
         "risk_factors": {
             "behavior_confidence": round(tech_conf * 100, 1),
             "attack_flow_coherence": round(flow["score"] * 100, 1),
@@ -607,6 +732,9 @@ def score_cluster(cluster: list[dict[str, Any]], techniques: dict[str, Any], edg
             "source_quality": round(source_quality * 100, 1),
             "ioc_specificity": round(ioc_specificity * 100, 1),
             "contradiction_penalty": round(contradiction_penalty * 100, 1),
+            "has_threatfox_corroboration": has_threatfox,
+            "has_sparta_taxonomy": has_sparta,
+            "has_cisa_kev_exploit": has_cisa_kev,
         },
         "runbook": remediation_runbook({
             "mission_impact": impact,
@@ -622,25 +750,41 @@ def summarize_record(raw: dict[str, Any]) -> str:
     return str(s)[:220]
 
 
-def analyze(root: Path) -> dict[str, Any]:
-    records, techniques, groups, edges, assets = load_context(str(root.resolve()))
-    if not isinstance(records, list):
-        raise ValueError("demo_alerts.json must contain a JSON list of observations")
-    record_ids = [record.get("_id") for record in records]
+def analyze(
+    root: Path,
+    records: list[dict[str, Any]] | None = None,
+    assets: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    file_records, techniques, groups, edges, file_assets = load_context(str(root.resolve()))
+    target_records = records if records is not None else file_records
+    target_assets = assets if assets is not None else file_assets
+
+    if not isinstance(target_records, list):
+        raise ValueError("Observations must be a list of records")
+    record_ids = [record.get("_id") or record.get("id") for record in target_records]
     if len(record_ids) != len(set(record_ids)):
-        raise ValueError("demo_alerts.json contains duplicate observation IDs")
-    norm = [normalize(r) for r in records]
+        # Deduplicate records by ID if dynamic ingestion included duplicate submission
+        seen_ids = set()
+        deduped = []
+        for r in target_records:
+            rid = r.get("_id") or r.get("id")
+            if rid not in seen_ids:
+                seen_ids.add(rid)
+                deduped.append(r)
+        target_records = deduped
+
+    norm = [normalize(r) for r in target_records]
     clusters = candidate_clusters(norm)
-    incidents = [score_cluster(c, techniques, edges, assets) for c in clusters]
+    incidents = [score_cluster(c, techniques, edges, target_assets) for c in clusters]
     incidents.sort(key=lambda x: (-int(x["promotable"]), -x["priority_score"]))
     return {
-        "records": records,
+        "records": target_records,
         "incidents": incidents,
         "candidate_clusters": clusters,
         "techniques": techniques,
         "groups": groups,
         "edges": edges,
-        "assets": assets,
+        "assets": target_assets,
         "metadata": {
             "engine_version": ENGINE_VERSION,
             "attack_kb_version": "v19.2",
@@ -696,7 +840,16 @@ def remediation_runbook(inc: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def bluf(inc: dict[str, Any]) -> dict[str, Any]:
-    techniques = ", ".join(dict.fromkeys(e["technique"] + " " + e["technique_name"] for e in inc["techniques"])) or "No high-confidence ATT&CK technique"
+    has_sparta = inc.get("has_sparta_taxonomy") or any(str(e.get("technique", "")).startswith("SPARTA-") for e in inc.get("techniques", []))
+    has_attack = any(not str(e.get("technique", "")).startswith("SPARTA-") for e in inc.get("techniques", []))
+    if has_sparta and has_attack:
+        fw_name = "ATT&CK & SPARTA"
+    elif has_sparta:
+        fw_name = "SPARTA Space-Cyber"
+    else:
+        fw_name = "MITRE ATT&CK"
+
+    techniques = ", ".join(dict.fromkeys(e["technique"] + " " + e["technique_name"] for e in inc["techniques"])) or f"No high-confidence {fw_name} technique"
     actor_line = actor_assessment(inc["actor_similarity"])
     actions = []
     if inc["mission_impact"] >= 80:
@@ -710,9 +863,22 @@ def bluf(inc: dict[str, Any]) -> dict[str, Any]:
     gaps = inc["attack_flow"].get("unobserved_intermediate_tactics", [])
     # Reuse the existing runbook rather than recomputing it.
     runbook = inc.get("runbook") or remediation_runbook(inc)
+
+    affected_assets = [a.get("asset") for a in inc.get("assets", [])]
+    assets_summary = ", ".join(affected_assets) if affected_assets else "corporate endpoints"
+
+    commander_brief = (
+        f"[{inc['priority']} · PRIORITY {inc['priority_score']}/100] "
+        f"Verified attack hypothesis with {inc['confidence']}% evidence confidence. "
+        f"Adversary activity targeting {assets_summary} (Mission Impact: {inc['mission_impact']}/100, Threat Severity: {inc['severity']}/100). "
+        f"{fw_name} progression: {techniques}. "
+        f"Immediate commander action: {actions[0] if actions else 'Maintain heightened monitoring'}."
+    )
+
     return {
         "bottom_line": f"{inc['priority']} incident with {inc['confidence']}% evidence confidence, {inc['severity']}/100 threat severity and {inc['mission_impact']}/100 mission impact.",
-        "assessment": f"Observed activity forms a {'coherent' if inc['attack_flow']['score'] >= 0.55 else 'weak'} multi-stage behavior pattern. ATT&CK evidence: {techniques}.",
+        "commander_briefing": commander_brief,
+        "assessment": f"Observed activity forms a {'coherent' if inc['attack_flow']['score'] >= 0.55 else 'weak'} multi-stage behavior pattern across {len(inc.get('sources', []))} independent feeds. {fw_name} evidence: {techniques}.",
         "actor_assessment": actor_line,
         "uncertainty": (
             "Unobserved intermediate tactics: " + ", ".join(gaps) + ". Absence may be a telemetry gap rather than absence of attacker activity."

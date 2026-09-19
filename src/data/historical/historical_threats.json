@@ -1,0 +1,237 @@
+[
+  {
+    "_id": "HIST-GHOST-01",
+    "timestamp": "2026-08-20T14:02:00Z",
+    "source": "siem",
+    "event_type": "email_attachment_opened",
+    "host": "FIN-LT22",
+    "user": "claire.finance",
+    "detail": "winword.exe opened external attachment Q3_Audit_Invoice_8821.docm from untrusted external sender.",
+    "provenance_type": "curated_snapshot",
+    "dataset_name": "ThreatFusion Historical Archive",
+    "origin": "siem_gateway",
+    "raw": {
+      "process": "winword.exe",
+      "attachment": "Q3_Audit_Invoice_8821.docm",
+      "sender": "billing@auditor-invoicing-service.com",
+      "cve": "CVE-2023-38831"
+    }
+  },
+  {
+    "_id": "HIST-GHOST-02",
+    "timestamp": "2026-08-20T14:03:30Z",
+    "source": "endpoint",
+    "event_type": "process_creation",
+    "host": "FIN-LT22",
+    "user": "claire.finance",
+    "process": "powershell.exe",
+    "parent_process": "winword.exe",
+    "cmdline": "powershell.exe -NonI -W Hidden -Exec Bypass -Enc JABjAGwAaQBlAG4AdAA9AE4AZQB3AC0ATwBiAGoAZQBjAHQ...",
+    "detail": "Encoded PowerShell execution spawned by winword.exe retrieving second-stage payload.",
+    "provenance_type": "curated_snapshot",
+    "dataset_name": "ThreatFusion Historical Archive",
+    "origin": "edr_agent",
+    "raw": {
+      "parent_image": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
+      "image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe"
+    }
+  },
+  {
+    "_id": "HIST-GHOST-03",
+    "timestamp": "2026-08-20T14:06:00Z",
+    "source": "endpoint",
+    "event_type": "credential_access",
+    "host": "FIN-LT22",
+    "user": "claire.finance",
+    "process": "rundll32.exe",
+    "target_process": "lsass.exe",
+    "detail": "rundll32.exe opened handle with PROCESS_VM_READ access into lsass.exe process memory.",
+    "provenance_type": "curated_snapshot",
+    "dataset_name": "ThreatFusion Historical Archive",
+    "origin": "edr_agent",
+    "raw": {
+      "source_image": "C:\\Windows\\System32\\rundll32.exe",
+      "target_image": "C:\\Windows\\System32\\lsass.exe",
+      "granted_access": "0x1010"
+    }
+  },
+  {
+    "_id": "HIST-GHOST-04",
+    "timestamp": "2026-08-20T14:12:00Z",
+    "source": "network_sensor",
+    "event_type": "c2_traffic",
+    "host": "FIN-LT22",
+    "src_ip": "10.20.4.12",
+    "dst_ip": "91.240.118.172",
+    "dst_port": 8080,
+    "detail": "Periodic HTTP beaconing with high entropy payload to external host 91.240.118.172 on port 8080.",
+    "provenance_type": "curated_snapshot",
+    "dataset_name": "ThreatFusion Historical Archive",
+    "origin": "network_ids",
+    "raw": {
+      "ioc": "91.240.118.172",
+      "threat_name": "AsyncRAT C2",
+      "protocol": "TCP"
+    }
+  },
+  {
+    "_id": "HIST-GHOST-05",
+    "timestamp": "2026-08-20T14:25:00Z",
+    "source": "siem",
+    "event_type": "lateral_logon",
+    "host": "FIN-SRV01",
+    "src_host": "FIN-LT22",
+    "user": "svc_fin_admin",
+    "detail": "Windows Event 4624 Type 3 network logon to FIN-SRV01 using harvested credentials of svc_fin_admin from FIN-LT22.",
+    "provenance_type": "curated_snapshot",
+    "dataset_name": "ThreatFusion Historical Archive",
+    "origin": "domain_siem",
+    "raw": {
+      "logon_type": 3,
+      "auth_package": "Kerberos",
+      "target_server": "FIN-SRV01"
+    }
+  },
+  {
+    "_id": "HIST-GHOST-06",
+    "timestamp": "2026-08-20T14:32:00Z",
+    "source": "endpoint",
+    "event_type": "defense_evasion",
+    "host": "FIN-SRV01",
+    "user": "svc_fin_admin",
+    "process": "wevtutil.exe",
+    "cmdline": "wevtutil.exe cl Security",
+    "detail": "wevtutil cl Security executed to clear Windows security audit event log on finance core server.",
+    "provenance_type": "curated_snapshot",
+    "dataset_name": "ThreatFusion Historical Archive",
+    "origin": "edr_agent",
+    "raw": {
+      "command": "wevtutil cl Security",
+      "subtechnique": "T1070.001"
+    }
+  },
+  {
+    "_id": "HIST-GHOST-07",
+    "timestamp": "2026-08-20T14:40:00Z",
+    "source": "network_sensor",
+    "event_type": "data_exfiltration",
+    "host": "FIN-SRV01",
+    "src_ip": "10.20.1.5",
+    "dst_ip": "91.240.118.172",
+    "dst_port": 8080,
+    "detail": "Unusual egress data spike (420 MB) over encrypted connection to known malicious node 91.240.118.172.",
+    "provenance_type": "curated_snapshot",
+    "dataset_name": "ThreatFusion Historical Archive",
+    "origin": "network_ids",
+    "raw": {
+      "bytes_out": 440401920,
+      "ioc": "91.240.118.172",
+      "destination": "91.240.118.172"
+    }
+  },
+  {
+    "_id": "HIST-STAR-01",
+    "timestamp": "2026-09-02T08:15:00Z",
+    "source": "satellite_sensor",
+    "event_type": "space_reconnaissance",
+    "host": "SATCOM-GW01",
+    "detail": "RF spectrum scanning sweep detected on satellite telemetry tracking carrier frequency (2245.5 MHz).",
+    "provenance_type": "synthetic",
+    "dataset_name": "SPARTA Historical Aerospace Archive",
+    "origin": "rf_ground_monitor",
+    "raw": {
+      "frequency_mhz": 2245.5,
+      "sparta_technique": "REC-0004",
+      "band": "S-Band"
+    }
+  },
+  {
+    "_id": "HIST-STAR-02",
+    "timestamp": "2026-09-02T08:30:00Z",
+    "source": "siem",
+    "event_type": "unauthorized_tracking_access",
+    "host": "SATCOM-GW01",
+    "src_host": "SAT-TRACK-01",
+    "user": "orbit_operator",
+    "detail": "Repeated unauthorized authentication attempts targeting ground telecommand tracking interface.",
+    "provenance_type": "synthetic",
+    "dataset_name": "SPARTA Historical Aerospace Archive",
+    "origin": "ground_siem",
+    "raw": {
+      "sparta_technique": "IA-0001",
+      "failed_count": 8,
+      "interface": "TrackingPedestalAPI"
+    }
+  },
+  {
+    "_id": "HIST-STAR-03",
+    "timestamp": "2026-09-02T08:50:00Z",
+    "source": "threat_intel_report",
+    "event_type": "space_threat_bulletin",
+    "host": "SATCOM-GW01",
+    "detail": "Space ISAC Advisory: Active electronic reconnaissance against civilian and defence S-band tracking gateways.",
+    "provenance_type": "curated_snapshot",
+    "dataset_name": "SPARTA Historical Aerospace Archive",
+    "origin": "space_isac",
+    "raw": {
+      "bulletin_id": "SP-ISAC-2026-088",
+      "framework": "SPARTA"
+    }
+  },
+  {
+    "_id": "HIST-MOVE-01",
+    "timestamp": "2026-08-25T11:05:00Z",
+    "source": "siem",
+    "event_type": "web_exploit_attempt",
+    "host": "DMZ-PROXY01",
+    "src_ip": "194.165.16.89",
+    "detail": "HTTP POST to /guestaccess.aspx with serialized payload targeting CVE-2023-34362 (MOVEit SQL injection).",
+    "provenance_type": "curated_snapshot",
+    "dataset_name": "ThreatFusion Historical Archive",
+    "origin": "waf_syslog",
+    "raw": {
+      "cve": "CVE-2023-34362",
+      "action_taken": "blocked_by_waf",
+      "ioc": "194.165.16.89"
+    }
+  },
+  {
+    "_id": "HIST-MOVE-02",
+    "timestamp": "2026-08-25T11:06:00Z",
+    "source": "threat_intel_report",
+    "event_type": "kev_bulletin",
+    "host": "DMZ-PROXY01",
+    "detail": "CISA KEV Alert: Active exploitation of CVE-2023-34362 in the wild by extortion threat actors.",
+    "provenance_type": "curated_snapshot",
+    "dataset_name": "ThreatFusion Historical Archive",
+    "origin": "cisa_kev_feed",
+    "raw": {
+      "cve": "CVE-2023-34362",
+      "known_exploited": true
+    }
+  },
+  {
+    "_id": "HIST-NOISE-01",
+    "timestamp": "2026-08-20T03:00:00Z",
+    "source": "endpoint",
+    "event_type": "antivirus_scan_clean",
+    "host": "FIN-SRV01",
+    "user": "system",
+    "detail": "Nightly scheduled enterprise antivirus scan completed with 0 threats detected.",
+    "provenance_type": "curated_snapshot",
+    "dataset_name": "ThreatFusion Historical Archive",
+    "origin": "av_console"
+  },
+  {
+    "_id": "HIST-NOISE-02",
+    "timestamp": "2026-08-25T02:30:00Z",
+    "source": "endpoint",
+    "event_type": "backup_execution",
+    "host": "ENG-DB01",
+    "user": "backup_svc",
+    "detail": "Scheduled volume shadow copy backup task completed successfully.",
+    "provenance_type": "curated_snapshot",
+    "dataset_name": "ThreatFusion Historical Archive",
+    "origin": "backup_syslog"
+  }
+]

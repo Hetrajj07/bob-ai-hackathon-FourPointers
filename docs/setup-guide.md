@@ -49,7 +49,7 @@ Open http://127.0.0.1:8000.
 python -m pytest -q src/tests
 ```
 
-Expected result: **32 passed**.
+Expected result: **35 passed**.
 
 ## Run the offline evaluation
 

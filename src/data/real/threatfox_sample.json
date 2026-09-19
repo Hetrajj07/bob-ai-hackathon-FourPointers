@@ -1,0 +1,50 @@
+[
+  {
+    "id": "TF-IOC-1001",
+    "ioc_value": "185.214.66.91",
+    "ioc_type": "ip:port",
+    "threat_type": "botnet_cc",
+    "malware": "win.cobalt_strike",
+    "malware_printable": "Cobalt Strike",
+    "confidence_level": 100,
+    "first_seen": "2026-09-15T08:00:00Z",
+    "reporter": "abuse_ch",
+    "tags": ["c2", "cobalt_strike", "adversary_simulation"]
+  },
+  {
+    "id": "TF-IOC-1002",
+    "ioc_value": "194.26.29.112",
+    "ioc_type": "ip:port",
+    "threat_type": "botnet_cc",
+    "malware": "win.asyncrat",
+    "malware_printable": "AsyncRAT",
+    "confidence_level": 95,
+    "first_seen": "2026-09-16T12:00:00Z",
+    "reporter": "abuse_ch",
+    "tags": ["rat", "asyncrat", "c2"]
+  },
+  {
+    "id": "TF-IOC-1003",
+    "ioc_value": "update-service-telemetry.net",
+    "ioc_type": "domain",
+    "threat_type": "payload_delivery",
+    "malware": "win.mimikatz",
+    "malware_printable": "Mimikatz",
+    "confidence_level": 90,
+    "first_seen": "2026-09-17T09:30:00Z",
+    "reporter": "threatfox_community",
+    "tags": ["credential_dumping", "delivery"]
+  },
+  {
+    "id": "TF-IOC-1004",
+    "ioc_value": "198.51.100.45",
+    "ioc_type": "ip:port",
+    "threat_type": "botnet_cc",
+    "malware": "sat.relay_hijack",
+    "malware_printable": "Satellite Relay Hijack C2",
+    "confidence_level": 95,
+    "first_seen": "2026-09-18T14:00:00Z",
+    "reporter": "defence_intel",
+    "tags": ["satcom", "ground_station", "c2"]
+  }
+]

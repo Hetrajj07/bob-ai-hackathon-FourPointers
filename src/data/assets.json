@@ -1,9 +1,18 @@
 {
-  "ENG-DB01":  {"criticality": 95, "mission_role": "Engineering database",         "zone": "mission-critical"},
-  "ENG-WKS17": {"criticality": 82, "mission_role": "Engineering workstation",      "zone": "engineering"},
-  "VPN-GW01":  {"criticality": 90, "mission_role": "Remote access gateway",        "zone": "perimeter"},
-  "FIN-LT22":  {"criticality": 58, "mission_role": "Finance endpoint",             "zone": "corporate"},
-  "FIN-SRV01": {"criticality": 88, "mission_role": "Finance application server",   "zone": "finance"},
-  "HR-WKS03":  {"criticality": 65, "mission_role": "HR workstation",               "zone": "corporate"},
-  "CORE-SW01": {"criticality": 78, "mission_role": "Core network switch",          "zone": "infrastructure"}
+  "ENG-DB01":      {"criticality": 95, "mission_role": "Engineering database",                    "zone": "mission-critical"},
+  "ENG-WKS17":     {"criticality": 82, "mission_role": "Engineering workstation",                 "zone": "engineering"},
+  "OPS-AP02":      {"criticality": 84, "mission_role": "Operations telemetry & application server", "zone": "operations"},
+  "DC-AUTH01":     {"criticality": 96, "mission_role": "Active Directory Domain Controller",       "zone": "infrastructure"},
+  "VPN-GW01":      {"criticality": 90, "mission_role": "Remote access gateway",                   "zone": "perimeter"},
+  "DMZ-WEB01":     {"criticality": 75, "mission_role": "Public web application portal",           "zone": "dmz"},
+  "DMZ-PROXY01":    {"criticality": 72, "mission_role": "Inbound perimeter reverse proxy",         "zone": "dmz"},
+  "FIN-LT22":      {"criticality": 58, "mission_role": "Finance endpoint",                        "zone": "corporate"},
+  "FIN-SRV01":     {"criticality": 88, "mission_role": "Finance core application server",          "zone": "finance"},
+  "HR-WKS03":      {"criticality": 65, "mission_role": "HR workstation",                          "zone": "corporate"},
+  "CORE-SW01":     {"criticality": 78, "mission_role": "Core network switch",                     "zone": "infrastructure"},
+  "SATCOM-GW01":   {"criticality": 92, "mission_role": "Primary SATCOM downlink ground gateway",  "zone": "mission-critical"},
+  "SATCOM-GW02":   {"criticality": 92, "mission_role": "Secondary SATCOM tracking gateway",       "zone": "mission-critical"},
+  "SAT-TRACK-01":  {"criticality": 88, "mission_role": "Satellite antenna RF tracking pedestal",  "zone": "space-ground"},
+  "SAT-BUS-AOCS":  {"criticality": 98, "mission_role": "Spacecraft Attitude & Orbit Control Bus", "zone": "space-segment"},
+  "SAT-PAYLOAD-01": {"criticality": 94, "mission_role": "Optical earth observation sensor payload","zone": "space-segment"}
 }

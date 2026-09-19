@@ -15,35 +15,37 @@ team:
 submission:
   title: "ThreatFusion — Evidence-Backed Threat Intelligence Correlation"
   problem_statement: >
-    Defence analysts receive heterogeneous SIEM, cyber-sensor and intelligence observations
-    that are difficult to correlate without over-grouping routine activity. ThreatFusion
-    validates candidate incident hypotheses against behavioral evidence, ATT&CK context and
-    attack-flow coherence before prioritizing them for investigation and command briefing.
+    Defence analysts receive thousands of alerts daily from SIEM systems, satellite feeds,
+    cyber sensors, and intelligence reports — all in different formats. No human team can read
+    them all. Missing a genuine threat is catastrophic; chasing false positives wastes critical
+    resources. Threat assessments must also be produced in structured BLUF (Bottom Line Up Front)
+    format so commanders get a clear picture in minutes.
   solution_summary: >
-    ThreatFusion normalizes four source schemas, performs weighted temporal/entity correlation,
-    infers ATT&CK sub-techniques, measures attack-flow coherence, and separates evidence confidence,
-    threat severity, mission impact and urgency. IBM Bob accesses grounded investigation tools through
-    MCP and generates commander-ready BLUFs without calculating or inventing the underlying evidence.
+    ThreatFusion is an IBM Bob solution that ingests multi-source threat feeds (SIEM, satellite
+    feeds, cyber sensors, intelligence reports) into a persistent SQLite database, correlates alerts
+    to separate genuine threats from false positives, maps attacker techniques to the MITRE ATT&CK
+    framework, and generates prioritised BLUF investigation summaries for commanders through MCP.
   key_features:
-    - "Evidence-weighted multi-source candidate correlation with temporal decay and source independence"
-    - "Auditable MITRE ATT&CK technique/sub-technique inference with provenance"
-    - "Attack-flow coherence plus negative evidence and telemetry uncertainty"
-    - "Explainable confidence, threat severity, mission impact and urgency scoring"
-    - "IBM Bob MCP investigation workflow with /investigate, /explain, /bluf and /runbook"
+    - "Multi-source feed ingestion (SIEM, satellite feeds, endpoint/network cyber sensors, CTI) with persistent SQLite backend"
+    - "Evidence-weighted candidate correlation with temporal decay and source independence to separate genuine threats from false positives"
+    - "Auditable MITRE ATT&CK v19.2 technique and sub-technique mapping with provenance and attack-flow coherence"
+    - "Explainable 4D scoring decomposing Confidence, Threat Severity, Mission Impact, and Urgency"
+    - "Structured Commander-Ready BLUF summaries and IBM Bob MCP investigation workflows (/bluf, /investigate, /explain, /runbook)"
   tech_stack:
     languages: ["Python", "JavaScript", "HTML", "CSS"]
     frameworks: ["FastAPI", "Uvicorn"]
     ibm_technologies: ["IBM Bob", "IBM Bob MCP workflow"]
-    databases: ["Versioned JSON reference/data"]
-    other: ["MITRE ATT&CK v19.2", "pytest", "JSON-RPC 2.0 over stdio"]
+    databases: ["SQLite (persistent storage)", "MITRE ATT&CK v19.2 reference"]
+    other: ["pytest", "JSON-RPC 2.0 over stdio", "Inverted Entity Index"]
   what_we_are_most_proud_of: >
     We do not promote a shared-entity cluster directly into an incident. The engine separates
     candidate hypotheses from incident promotion and requires ATT&CK evidence, coherent behavior,
-    corroboration and contextual impact. Runtime scoring never reads the benchmark ground truth.
+    corroboration and contextual impact to eliminate false positives. Runtime scoring never reads
+    the benchmark ground truth, and IBM Bob interrogates live persistent database evidence.
   known_limitations: >
-    The prototype uses synthetic telemetry and a bundled ATT&CK reference snapshot. It is an
-    evidence-backed hackathon prototype with production-oriented architecture, not a production SOC,
-    and does not perform autonomous containment or real actor attribution.
+    The prototype uses synthetic telemetry across SIEM, satellite, cyber-sensor and intelligence feeds
+    and a bundled ATT&CK reference snapshot. It is an evidence-backed prototype with production-oriented
+    architecture, not a live production SOC, and requires analyst approval for containment actions.
 
 artifacts:
   source_code: "src/"

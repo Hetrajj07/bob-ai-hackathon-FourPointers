@@ -8,6 +8,7 @@ from threatfusion.engine import (
     actor_assessment, actor_similarity, attack_flow, edge_strength,
     text_of, _as_string_list, asset_criticality, clear_context_cache,
     candidate_clusters, score_cluster, _canonical_entity_value,
+    _cluster_span_minutes,
 )
 
 
@@ -215,3 +216,46 @@ def test_clear_context_cache():
     d = analyze(ROOT.parent)
     assert d["metadata"]["engine_version"]
     clear_context_cache()  # should not raise
+
+
+def test_demo_consistency():
+    """Runtime numbers must match the documented demo dataset."""
+    d = analyze(ROOT.parent)
+    assert len(d["records"]) == 62, "demo_alerts.json must contain exactly 62 observations"
+    assert d["metadata"]["ground_truth_used_for_runtime"] is False
+    promoted = promoted_incidents(d)
+    assert len(promoted) == 4, "Engine must promote exactly 4 evidence-backed incidents from the demo dataset"
+    assert len(d["incidents"]) == 5, "Engine must produce exactly 5 candidate hypotheses from the demo dataset"
+
+
+def test_cluster_span_does_not_create_arbitrarily_long_incidents():
+    """Transitive chaining must not produce a cluster spanning beyond max_span_minutes.
+
+    A→B and B→C each pass the edge-strength threshold (IOC entity, weight 1.0,
+    cross-source). That creates one three-record cluster spanning 200 minutes.
+    With a tight 100-minute cap the greedy split must break it into sub-windows
+    so no single returned cluster exceeds the cap.
+    """
+    # Use cross-source IOC events 5 minutes apart so the edge strength clears 0.38.
+    # A→B: 5 min, B→C: 5 min, cluster span = 10 min — well within any cap.
+    # Then use a very tight 3-minute cap to force a split and verify no sub-cluster exceeds it.
+    norm = [
+        normalize({"_id": "SPAN-A", "timestamp": "2026-09-15T08:00:00Z", "source": "siem",
+                   "ioc": "10.99.99.1", "host": "SRV99"}),
+        normalize({"_id": "SPAN-B", "timestamp": "2026-09-15T08:05:00Z", "source": "endpoint",
+                   "ioc": "10.99.99.1", "host": "SRV99"}),
+        normalize({"_id": "SPAN-C", "timestamp": "2026-09-15T08:10:00Z", "source": "network_sensor",
+                   "ioc": "10.99.99.1", "host": "SRV99"}),
+    ]
+    # Verify edges actually clear the clustering threshold (self-check).
+    ab_strength, _ = edge_strength(norm[0], norm[1])
+    assert ab_strength >= 0.38, f"Test setup: A-B edge {ab_strength:.3f} must be ≥ 0.38"
+
+    # With a wide cap (60 min) all 3 join one cluster (10-min span < 60 min).
+    clusters_wide = candidate_clusters(norm, max_span_minutes=60.0)
+    assert any(len(c) == 3 for c in clusters_wide), "All 3 records must join one cluster under 60-min cap"
+
+    # With a tight 3-minute cap the 10-min chain must be split into sub-windows ≤ 3 min each.
+    clusters_tight = candidate_clusters(norm, max_span_minutes=3.0)
+    spans = [_cluster_span_minutes(c) for c in clusters_tight]
+    assert all(s <= 3.0 for s in spans), f"No cluster should exceed 3 min; got spans {spans}"

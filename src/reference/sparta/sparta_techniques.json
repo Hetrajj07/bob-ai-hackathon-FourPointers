@@ -1,0 +1,44 @@
+[
+  {
+    "id": "SPARTA-REC-0001",
+    "name": "Identify Spacecraft Architecture & Subsystems",
+    "tactics": ["reconnaissance"],
+    "segment": "space",
+    "description": "Adversary gathers intelligence on spacecraft bus, payload capabilities, flight software, and telemetry downlink frequencies."
+  },
+  {
+    "id": "SPARTA-IA-0001",
+    "name": "Compromise Ground Station Segment",
+    "tactics": ["initial-access"],
+    "segment": "ground",
+    "description": "Adversary achieves initial access to satellite ground station control servers, tracking networks, or operator workstations."
+  },
+  {
+    "id": "SPARTA-EX-0001",
+    "name": "Command Injection via Telemetry Bus",
+    "tactics": ["execution"],
+    "segment": "space",
+    "description": "Adversary injects unauthorized command sequences into the flight computer or telemetry bus over compromised ground station relays."
+  },
+  {
+    "id": "SPARTA-C2-0001",
+    "name": "Rogue Command Uplink & Telemetry Hijacking",
+    "tactics": ["command-and-control"],
+    "segment": "link",
+    "description": "Adversary transmits forged telemetry or uplink control frames across the radio frequency (RF) satellite link."
+  },
+  {
+    "id": "SPARTA-LM-0001",
+    "name": "Ground-to-Space Lateral Movement",
+    "tactics": ["lateral-movement"],
+    "segment": "link",
+    "description": "Adversary leverages compromised ground segment terminal to pivot into space-ground communications links and spacecraft bus controllers."
+  },
+  {
+    "id": "SPARTA-IMP-0001",
+    "name": "RF Downlink Jamming & Signal Degradation",
+    "tactics": ["impact"],
+    "segment": "link",
+    "description": "Adversary transmits high-power interference on downlink frequencies to degrade or disrupt mission telemetry reception."
+  }
+]

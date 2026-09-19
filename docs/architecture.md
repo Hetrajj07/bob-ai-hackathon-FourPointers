@@ -41,17 +41,20 @@ graph TD
 4. **ATT&CK mappings are evidence-backed.** RDP requires RDP evidence; LSASS behavior maps to T1003.001 rather than the broader T1003.
 5. **Actor similarity is not attribution.** Historical ATT&CK technique overlap is presented only as behavioral consistency.
 
-## Data Flow
+## Data Flow & Provenance Model
 
-Input records arrive in four intentionally different schemas. The normalizer extracts common entities and preserves provenance. Candidate edges combine relationship-specific weights, source separation and temporal decay. The resulting clusters are enriched with ATT&CK behavior. Attack-flow coherence, source independence, IOC specificity, negative evidence and asset criticality are then used to calculate separate decision dimensions. Only clusters that satisfy the promotion rules are shown as incidents.
+ThreatFusion supports multiple telemetry sources through a canonical normalization layer. Public real-world host/network datasets are used as reproducible samples where appropriate; CTI can be represented through curated snapshots and/or live feeds; SPARTA provides the space-cyber reference taxonomy; satellite telemetry in the demonstration remains synthetic.
 
-## Security Considerations
+Input records arrive in multiple schemas across host, network, CTI, and space telemetry feeds. The normalizer transforms each into a canonical representation while preserving explicit provenance (`synthetic`, `real_sample`, `curated_snapshot`, `live_feed`). Candidate edges combine relationship-specific weights, source separation and temporal decay. The resulting clusters are enriched with ATT&CK or SPARTA behavioral mappings. Attack-flow coherence, source independence, IOC specificity, negative evidence and asset criticality are then used to calculate separate decision dimensions. Only clusters that satisfy the promotion rules are escalated as incidents.
 
-- No credentials are stored in the repository.
-- MCP uses local STDIO rather than exposing a network listener.
-- The prototype is read-only and has no autonomous containment action.
-- Synthetic telemetry is used for the demo.
-- Production use would require enterprise identity, secrets management, authorization, logging and data-governance controls.
+## Security & Provenance Considerations
+
+- **Provenance Integrity:** Every record carries explicit origin and dataset provenance badges. Real-world samples (OTRF, CIC-IDS2017) are never conflated with live attacks, and satellite telemetry is explicitly marked as synthetic demonstration.
+- **CTI & KEV Reproducibility:** ThreatFox IOCs and CISA Known Exploited Vulnerabilities (KEV) are stored as local curated snapshots to guarantee 100% deterministic, offline evaluation without runtime internet dependencies.
+- **Taxonomy Boundaries:** MITRE ATT&CK and SPARTA (Aerospace Corp Space Attack Research & Tactic Analysis) operate in distinct framework namespaces; SPARTA techniques do not contaminate ATT&CK APT actor profiles.
+- **Credentials & Access:** No credentials are stored in the repository.
+- **Local MCP:** MCP runs locally over standard I/O (STDIO) rather than exposing network listeners.
+- **Prototype Scope:** The prototype is evidence-backed and read-only with no autonomous containment actions.
 
 ## Scalability & Performance Optimization
 

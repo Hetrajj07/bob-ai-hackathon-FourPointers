@@ -1,17 +1,23 @@
 ---
-description: Investigate a ThreatFusion incident using grounded MCP evidence
-argument-hint: <incident-id>
+description: Investigate a ThreatFusion candidate hypothesis or promoted incident using grounded MCP evidence
+argument-hint: <candidate-or-incident-id>
 ---
 
 # /investigate
 
-Investigate a ThreatFusion incident using the MCP tools.
+Investigate a ThreatFusion candidate hypothesis or promoted incident using MCP tools.
 
-Workflow:
-1. Call `get_incident` for the requested incident ID.
-2. Call `explain_risk` and `get_detection_gaps`.
-3. Explain the conclusion only from returned evidence; do not invent telemetry.
-4. Distinguish evidence confidence, threat severity and mission impact.
-5. End with a concise analyst next-step plan.
+## Investigation Flow
 
-Never claim threat-actor attribution from technique overlap. Use “behaviorally consistent with” instead.
+1. Call `get_incident(incident_id=...)` for the requested ID. (If none provided, call `correlate_events()` first).
+2. Check `status` to determine whether this is a **PROMOTED INCIDENT** or a **CANDIDATE HYPOTHESIS**.
+3. Generate a structured 100–250 word Human-Readable Threat Brief:
+   - **THREAT / CANDIDATE:** ID, Status, Priority
+   - **WHAT HAPPENED:** 1–3 sentence event summary
+   - **WHY IT MATTERS:** Practical security significance
+   - **WHY IT WAS PRIORITIZED:** Key evidence drivers and cross-source corroboration
+   - **EVIDENCE:** Key ATT&CK / SPARTA techniques, sources, IOC matches
+   - **CONFIDENCE & IMPACT:** Plain-language interpretation of 4D risk scores
+   - **WHAT TO DO NEXT:** 2–5 prioritized investigation and response actions
+   - **UNKNOWN / LIMITATIONS:** Explicitly mention unobserved intermediate tactics
+4. Preserve factual boundaries: Never claim nation-state attribution without verifiable intelligence.

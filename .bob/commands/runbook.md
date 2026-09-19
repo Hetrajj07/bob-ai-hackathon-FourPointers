@@ -1,14 +1,19 @@
 ---
-description: Retrieve prioritized Incident Response containment and remediation runbooks for a ThreatFusion incident
-argument-hint: <incident-id>
+description: Retrieve prioritized, phased incident response runbooks with explicit analyst safety controls
+argument-hint: <candidate-or-incident-id>
 ---
 
 # /runbook
 
-Retrieve the prioritized Incident Response containment, eradication, and detection engineering runbook for an incident.
+Retrieve prioritized Incident Response containment, eradication, and detection engineering runbooks.
 
-Workflow:
-1. Call `get_remediation_runbook` for the requested incident ID.
-2. Group recommended actions by phase (Containment, Eradication, Detection Engineering).
-3. Clearly highlight Immediate vs. High priority actions.
-4. Specify the target systems (Firewall, IAM, Endpoint Policy, Email Security).
+## Runbook Flow
+
+1. Call `get_remediation_runbook(incident_id=...)` for the requested ID.
+2. Group recommended actions into clear phases:
+   - **Phase 1: Investigation & Telemetry Gathering** (Immediate, Non-disruptive)
+   - **Phase 2: Containment** (Immediate/High · Requires Analyst Authorization)
+   - **Phase 3: Eradication** (High · Requires Analyst Authorization)
+   - **Phase 4: Detection Engineering** (Medium · Proactive hunting queries & rules)
+3. Explicitly note target infrastructure systems (Firewall, IAM, Endpoint, SIEM).
+4. Include the operational safety notice that ThreatFusion does NOT autonomously execute disruptive containment.
