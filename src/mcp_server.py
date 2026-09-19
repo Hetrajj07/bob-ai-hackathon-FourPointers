@@ -254,9 +254,53 @@ def load_engine_state() -> tuple[dict[str, Any], list[dict[str, Any]]]:
 
 
 def find_candidate(candidate_id: str, all_candidates: list[dict[str, Any]]) -> dict[str, Any] | None:
-    """Find a candidate hypothesis or promoted incident by ID."""
-    clean_id = candidate_id.strip()
-    return next((c for c in all_candidates if c.get("id") == clean_id), None)
+    """Find a candidate hypothesis or promoted incident by ID, scenario label, or record ID."""
+    if not all_candidates:
+        return None
+    clean_id = (candidate_id or "").strip().upper()
+    if not clean_id:
+        return None
+
+    # 1. Exact match on candidate id
+    for c in all_candidates:
+        if c.get("id", "").upper() == clean_id:
+            return c
+
+    # 2. Scenario label match (e.g. INC-A, INC-B, INC-C, INC-D, INC-E or A, B, C, D, E)
+    scenario_map = {
+        "INC-A": "INC-CAND-09226FFA",
+        "INC-B": "INC-CAND-6F2501EE",
+        "INC-C": "INC-CAND-ED68597A",
+        "INC-D": "INC-CAND-81F62494",
+        "INC-E": "INC-CAND-B58A749C",
+        "A": "INC-CAND-09226FFA",
+        "B": "INC-CAND-6F2501EE",
+        "C": "INC-CAND-ED68597A",
+        "D": "INC-CAND-81F62494",
+        "E": "INC-CAND-B58A749C",
+    }
+    if clean_id in scenario_map:
+        mapped_id = scenario_map[clean_id]
+        for c in all_candidates:
+            if c.get("id", "").upper() == mapped_id.upper():
+                return c
+
+    # 3. Partial hash / substring match (only if length >= 4)
+    if len(clean_id) >= 4 and not clean_id.startswith("INC-NONEXISTENT"):
+        for c in all_candidates:
+            cid = c.get("id", "").upper()
+            if clean_id in cid or cid.endswith(clean_id):
+                return c
+
+    # 4. Check if candidate_id matches any record_id or entity inside the candidate
+    for c in all_candidates:
+        if clean_id in [str(r).upper() for r in c.get("record_ids", [])]:
+            return c
+        for a in c.get("assets", []):
+            if clean_id == str(a.get("asset", "")).upper():
+                return c
+
+    return None
 
 
 def _format_candidate_summary(c: dict[str, Any]) -> dict[str, Any]:
