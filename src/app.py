@@ -56,44 +56,44 @@ INDEX = r'''<!doctype html>
   <title>ThreatFusion — Analyst Workspace</title>
   <style>
     :root {
-      --bg-base: #090c10;
-      --bg-surface: #0e131b;
-      --bg-surface-elevated: #151c27;
-      --bg-surface-highlight: #1c2636;
-      --border-subtle: #1c2533;
-      --border-default: #263346;
-      --border-strong: #3b4d66;
+      --bg-base: #080b10;
+      --bg-surface: #0e131c;
+      --bg-surface-elevated: #131b27;
+      --bg-surface-highlight: #1a2434;
+      --border-subtle: #17202e;
+      --border-default: #202c3e;
+      --border-strong: #2f3e56;
       
-      --text-primary: #f0f6fc;
+      --text-primary: #f1f5f9;
       --text-secondary: #94a3b8;
       --text-muted: #64748b;
       --text-faint: #334155;
 
       --tactical-blue: #38bdf8;
-      --tactical-blue-dim: rgba(56, 189, 248, 0.12);
-      --tactical-blue-border: rgba(56, 189, 248, 0.35);
+      --tactical-blue-dim: rgba(56, 189, 248, 0.10);
+      --tactical-blue-border: rgba(56, 189, 248, 0.30);
 
       --danger-red: #f43f5e;
-      --danger-red-dim: rgba(244, 63, 94, 0.12);
-      --danger-red-border: rgba(244, 63, 94, 0.35);
+      --danger-red-dim: rgba(244, 63, 94, 0.10);
+      --danger-red-border: rgba(244, 63, 94, 0.30);
 
       --warning-amber: #f59e0b;
-      --warning-amber-dim: rgba(245, 158, 11, 0.12);
-      --warning-amber-border: rgba(245, 158, 11, 0.35);
+      --warning-amber-dim: rgba(245, 158, 11, 0.10);
+      --warning-amber-border: rgba(245, 158, 11, 0.30);
 
       --success-green: #10b981;
-      --success-green-dim: rgba(16, 185, 129, 0.12);
-      --success-green-border: rgba(16, 185, 129, 0.35);
+      --success-green-dim: rgba(16, 185, 129, 0.10);
+      --success-green-border: rgba(16, 185, 129, 0.30);
 
       --purple-intel: #818cf8;
-      --purple-intel-dim: rgba(129, 140, 248, 0.12);
+      --purple-intel-dim: rgba(129, 140, 248, 0.10);
 
       --p1-color: #f43f5e;
-      --p1-bg: rgba(244, 63, 94, 0.15);
+      --p1-bg: rgba(244, 63, 94, 0.12);
       --p2-color: #f59e0b;
-      --p2-bg: rgba(245, 158, 11, 0.15);
+      --p2-bg: rgba(245, 158, 11, 0.12);
       --p3-color: #10b981;
-      --p3-bg: rgba(16, 185, 129, 0.15);
+      --p3-bg: rgba(16, 185, 129, 0.12);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -102,8 +102,8 @@ INDEX = r'''<!doctype html>
       background: var(--bg-base);
       color: var(--text-primary);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      font-size: 13px;
-      line-height: 1.55;
+      font-size: 12px;
+      line-height: 1.5;
       letter-spacing: -0.01em;
       -webkit-font-smoothing: antialiased;
     }
@@ -111,20 +111,20 @@ INDEX = r'''<!doctype html>
     button { cursor: pointer; }
     button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
       outline: 2px solid var(--tactical-blue);
-      outline-offset: 2px;
+      outline-offset: 1px;
     }
     .skip-link {
       position: fixed; left: 16px; top: -80px; z-index: 9999;
-      padding: 8px 14px; border-radius: 4px;
+      padding: 6px 12px; border-radius: 4px;
       background: var(--bg-surface-elevated); color: var(--tactical-blue);
       border: 1px solid var(--tactical-blue); font-weight: 700;
       transition: top 0.2s ease;
     }
-    .skip-link:focus { top: 16px; }
+    .skip-link:focus { top: 12px; }
 
     /* ── ANIMATIONS ── */
     @keyframes panelFadeIn {
-      from { opacity: 0; transform: translateY(6px); }
+      from { opacity: 0; transform: translateY(4px); }
       to { opacity: 1; transform: translateY(0); }
     }
     @keyframes pulseLive {
@@ -132,46 +132,86 @@ INDEX = r'''<!doctype html>
       50% { transform: scale(1.15); opacity: 1; }
       100% { transform: scale(0.95); opacity: 0.8; }
     }
-    @keyframes radarSweep {
-      0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.6); }
-      70% { box-shadow: 0 0 0 6px rgba(56, 189, 248, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
-    }
 
     /* ── TOPBAR ── */
     .topbar {
       position: sticky; top: 0; z-index: 100;
-      height: 56px; padding: 0 24px;
-      display: flex; align-items: center; justify-content: space-between; gap: 16px;
-      background: rgba(14, 19, 27, 0.95); backdrop-filter: blur(12px);
+      height: 48px; padding: 0 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      background: rgba(14, 19, 28, 0.95); backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border-subtle);
     }
-    .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .brand { display: flex; align-items: center; gap: 9px; text-decoration: none; flex-shrink: 0; }
     .brand-mark {
-      width: 30px; height: 30px; border-radius: 6px;
+      width: 26px; height: 26px; border-radius: 5px;
       background: #1e293b; border: 1px solid var(--border-strong);
       display: grid; place-items: center;
-      font-size: 14px; font-weight: 900; color: var(--tactical-blue);
+      font-size: 12px; font-weight: 900; color: var(--tactical-blue);
       font-family: ui-monospace, monospace;
       box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
     }
     .brand-name {
-      font-size: 15px; font-weight: 800; color: var(--text-primary);
-      letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px;
+      font-size: 14px; font-weight: 800; color: var(--text-primary);
+      letter-spacing: -0.02em; display: flex; align-items: center; gap: 6px;
     }
     .brand-tag {
-      font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
-      text-transform: uppercase; padding: 2px 6px; border-radius: 3px;
+      font-size: 9px; font-weight: 800; letter-spacing: 0.08em;
+      text-transform: uppercase; padding: 1px 5px; border-radius: 3px;
       background: var(--tactical-blue-dim); color: var(--tactical-blue);
       border: 1px solid var(--tactical-blue-border);
     }
-    .brand-sub { font-size: 11px; color: var(--text-muted); }
-    .topbar-right { display: flex; align-items: center; gap: 10px; }
+    .brand-sub { font-size: 10px; color: var(--text-muted); display: none; }
+    @media (min-width: 1200px) { .brand-sub { display: block; } }
+
+    /* Topbar Search Integration */
+    .topbar-search-wrap { position: relative; flex: 1; max-width: 480px; }
+    .topbar-search-icon {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); font-size: 11px; pointer-events: none;
+    }
+    .topbar-search-input {
+      width: 100%; padding: 5px 30px 5px 28px;
+      background: var(--bg-base); border: 1px solid var(--border-default);
+      border-radius: 5px; color: var(--text-primary); font-size: 11px;
+      transition: all 0.15s ease;
+    }
+    .topbar-search-input::placeholder { color: var(--text-muted); font-size: 11px; }
+    .topbar-search-input:focus {
+      outline: none; border-color: var(--tactical-blue);
+      box-shadow: 0 0 0 2px var(--tactical-blue-dim);
+    }
+    .topbar-search-btn {
+      position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
+      background: transparent; border: none; color: var(--text-muted);
+      font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+      cursor: pointer;
+    }
+    .topbar-search-btn:hover { color: var(--tactical-blue); background: var(--bg-surface-elevated); }
+
+    .search-results {
+      display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+      background: var(--bg-surface-elevated); border: 1px solid var(--border-strong);
+      border-radius: 6px; z-index: 200; max-height: 300px; overflow-y: auto;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.65);
+    }
+    .search-results.open { display: block; animation: panelFadeIn 0.15s ease; }
+    .search-result-item {
+      padding: 7px 10px; border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .search-result-item:last-child { border-bottom: none; }
+    .search-result-item:hover { background: var(--bg-surface-highlight); }
+    .search-result-id { font-family: ui-monospace, monospace; font-size: 10px; color: var(--tactical-blue); font-weight: 700; }
+    .search-result-snippet { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
+    .search-result-ts { font-size: 9px; color: var(--text-muted); font-family: ui-monospace, monospace; margin-top: 2px; }
+    .search-no-results { padding: 12px; text-align: center; color: var(--text-muted); font-size: 11px; }
+
+    .topbar-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
     .topbar-btn {
-      padding: 6px 12px; border-radius: 5px; font-size: 12px; font-weight: 600;
+      padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: 600;
       background: var(--bg-surface-elevated); color: var(--text-primary);
       border: 1px solid var(--border-default);
-      display: inline-flex; align-items: center; gap: 6px;
+      display: inline-flex; align-items: center; gap: 5px;
       transition: all 0.15s ease;
     }
     .topbar-btn:hover {
@@ -190,158 +230,106 @@ INDEX = r'''<!doctype html>
       border-color: var(--tactical-blue);
     }
     .topbar-badge {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 4px 9px; border-radius: 4px; font-size: 11px; font-weight: 700;
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 7px; border-radius: 4px; font-size: 10px; font-weight: 700;
       font-family: ui-monospace, monospace;
       background: var(--bg-surface); color: var(--text-secondary);
       border: 1px solid var(--border-default);
     }
     .live-dot {
-      width: 7px; height: 7px; border-radius: 50%;
+      width: 6px; height: 6px; border-radius: 50%;
       background: var(--success-green);
       display: inline-block;
       animation: pulseLive 2s infinite ease-in-out;
     }
-    .topbar-meta { font-size: 11px; color: var(--text-muted); font-family: ui-monospace, monospace; }
-
-    /* ── SEARCH BAR ── */
-    .search-bar-wrap {
-      padding: 8px 24px;
-      background: var(--bg-surface);
-      border-bottom: 1px solid var(--border-subtle);
-      display: flex; align-items: center; justify-content: space-between; gap: 12px;
-    }
-    .search-input-wrap { position: relative; flex: 1; max-width: 540px; }
-    .search-icon {
-      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-      color: var(--text-muted); font-size: 12px; pointer-events: none;
-    }
-    .search-input {
-      width: 100%; padding: 7px 12px 7px 34px;
-      background: var(--bg-base); border: 1px solid var(--border-default);
-      border-radius: 5px; color: var(--text-primary); font-size: 12px;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .search-input::placeholder { color: var(--text-muted); }
-    .search-input:focus {
-      outline: none; border-color: var(--tactical-blue);
-      box-shadow: 0 0 0 2px var(--tactical-blue-dim);
-    }
-    .search-btn {
-      padding: 7px 14px; border-radius: 5px; font-size: 12px; font-weight: 600;
-      background: var(--bg-surface-elevated); color: var(--text-primary);
-      border: 1px solid var(--border-default);
-      transition: all 0.15s ease;
-    }
-    .search-btn:hover {
-      background: var(--bg-surface-highlight);
-      border-color: var(--tactical-blue);
-      color: var(--tactical-blue);
-    }
-    .search-results {
-      display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
-      background: var(--bg-surface-elevated); border: 1px solid var(--border-strong);
-      border-radius: 6px; z-index: 200; max-height: 320px; overflow-y: auto;
-      box-shadow: 0 12px 32px rgba(0,0,0,0.6);
-    }
-    .search-results.open { display: block; animation: panelFadeIn 0.15s ease; }
-    .search-result-item {
-      padding: 9px 12px; border-bottom: 1px solid var(--border-subtle);
-      cursor: pointer; transition: background 0.1s;
-    }
-    .search-result-item:last-child { border-bottom: none; }
-    .search-result-item:hover { background: var(--bg-surface-highlight); }
-    .search-result-id { font-family: ui-monospace, monospace; font-size: 11px; color: var(--tactical-blue); font-weight: 700; }
-    .search-result-snippet { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
-    .search-result-ts { font-size: 10px; color: var(--text-muted); font-family: ui-monospace, monospace; margin-top: 3px; }
-    .search-no-results { padding: 14px; text-align: center; color: var(--text-muted); font-size: 12px; }
+    .topbar-meta { font-size: 10px; color: var(--text-muted); font-family: ui-monospace, monospace; display: none; }
+    @media (min-width: 1400px) { .topbar-meta { display: block; } }
 
     /* ── LAYOUT ── */
     .layout {
       display: grid;
-      grid-template-columns: 290px minmax(0, 1fr);
-      max-width: 1720px; margin: 0 auto;
-      min-height: calc(100vh - 96px);
+      grid-template-columns: 270px minmax(0, 1fr);
+      max-width: 100%; margin: 0 auto;
+      min-height: calc(100vh - 48px);
     }
 
     /* ── SIDEBAR QUEUE ── */
     .case-rail {
       background: var(--bg-surface);
       border-right: 1px solid var(--border-subtle);
-      padding: 16px;
+      padding: 10px 12px;
       display: flex; flex-direction: column; gap: 0;
     }
-    .rail-header { margin-bottom: 12px; }
+    .rail-header { margin-bottom: 8px; }
     .eyebrow {
-      font-size: 10px; font-weight: 800; letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;
+      font-size: 9px; font-weight: 800; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px;
       font-family: ui-monospace, monospace;
     }
-    .rail-title { font-size: 14px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.01em; }
-    .rail-copy { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .rail-title { font-size: 13px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.01em; }
+    .rail-copy { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
 
     /* Funnel summary */
     .funnel-banner {
       display: flex; align-items: center; justify-content: space-between;
       background: var(--bg-base); border: 1px solid var(--border-default);
-      border-radius: 6px; padding: 8px 6px; margin: 12px 0 14px;
+      border-radius: 5px; padding: 5px 6px; margin: 8px 0 10px;
     }
     .funnel-step { text-align: center; flex: 1; }
-    .funnel-num { font-size: 17px; font-weight: 800; line-height: 1; font-family: ui-monospace, monospace; }
+    .funnel-num { font-size: 14px; font-weight: 800; line-height: 1; font-family: ui-monospace, monospace; }
     .funnel-num.raw { color: var(--text-secondary); }
     .funnel-num.cand { color: var(--warning-amber); }
     .funnel-num.prom { color: var(--success-green); }
-    .funnel-label { font-size: 9px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-top: 4px; }
-    .funnel-arrow { color: var(--text-faint); font-size: 14px; font-weight: 900; }
+    .funnel-label { font-size: 8px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-top: 2px; }
+    .funnel-arrow { color: var(--text-faint); font-size: 12px; font-weight: 900; }
 
-    .case-list { display: grid; gap: 6px; flex: 1; align-content: flex-start; }
+    .case-list { display: grid; gap: 5px; flex: 1; align-content: flex-start; }
     .case-item {
-      width: 100%; padding: 10px 12px; text-align: left;
-      border: 1px solid var(--border-default); border-radius: 6px;
+      width: 100%; padding: 8px 10px; text-align: left;
+      border: 1px solid var(--border-default); border-radius: 5px;
       color: var(--text-primary); background: var(--bg-surface-elevated);
-      transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.12s ease;
       position: relative;
     }
     .case-item:hover {
       border-color: var(--border-strong);
       background: var(--bg-surface-highlight);
-      transform: translateX(2px);
     }
     .case-item[aria-current="true"] {
       border-color: var(--tactical-blue);
       background: var(--bg-surface-highlight);
-      box-shadow: inset 3px 0 0 var(--tactical-blue);
+      border-left: 3px solid var(--tactical-blue);
     }
-    .case-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 4px; }
+    .case-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 3px; }
     .case-id {
-      font-family: ui-monospace, monospace; font-size: 11px; font-weight: 800;
+      font-family: ui-monospace, monospace; font-size: 10px; font-weight: 800;
       color: var(--text-primary); letter-spacing: 0.02em;
     }
     .case-item[aria-current="true"] .case-id { color: var(--tactical-blue); }
     .priority {
-      display: inline-flex; align-items: center; gap: 4px;
-      padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 800;
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 800;
       font-family: ui-monospace, monospace; text-transform: uppercase;
     }
     .priority.p1 { color: var(--p1-color); background: var(--p1-bg); border: 1px solid var(--danger-red-border); }
     .priority.p2 { color: var(--p2-color); background: var(--p2-bg); border: 1px solid var(--warning-amber-border); }
     .priority.p3 { color: var(--p3-color); background: var(--p3-bg); border: 1px solid var(--success-green-border); }
     .case-techniques {
-      font-size: 11px; color: var(--text-secondary); margin-bottom: 6px;
+      font-size: 10px; color: var(--text-secondary); margin-bottom: 4px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .case-foot { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .case-foot { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
     .case-stat {
-      font-size: 10px; color: var(--text-muted); font-family: ui-monospace, monospace;
+      font-size: 9px; color: var(--text-muted); font-family: ui-monospace, monospace;
       background: var(--bg-base); border: 1px solid var(--border-subtle);
-      border-radius: 3px; padding: 1px 5px;
+      border-radius: 3px; padding: 1px 4px;
     }
 
-    .rail-divider { border: none; border-top: 1px solid var(--border-subtle); margin: 14px 0; }
+    .rail-divider { border: none; border-top: 1px solid var(--border-subtle); margin: 10px 0; }
     .rail-note {
-      font-size: 11px; color: var(--text-muted); padding: 10px;
+      font-size: 10px; color: var(--text-muted); padding: 8px;
       background: var(--bg-base); border: 1px solid var(--border-subtle);
-      border-radius: 5px; line-height: 1.5;
+      border-radius: 4px; line-height: 1.45;
     }
     .rail-note strong { color: var(--text-secondary); }
 
@@ -350,40 +338,40 @@ INDEX = r'''<!doctype html>
 
     /* Case header */
     .case-header {
-      padding: 18px 28px;
-      display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;
+      padding: 10px 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 14px;
       border-bottom: 1px solid var(--border-subtle);
       background: var(--bg-surface);
     }
     .case-header-left { flex: 1; min-width: 0; }
     .case-title {
-      font-size: 22px; font-weight: 800; color: var(--text-primary);
-      letter-spacing: -0.02em; margin-bottom: 4px;
+      font-size: 16px; font-weight: 800; color: var(--text-primary);
+      letter-spacing: -0.01em; margin-bottom: 2px;
       font-family: ui-monospace, monospace;
     }
-    .case-summary-text { font-size: 12px; color: var(--text-secondary); }
+    .case-summary-text { font-size: 11px; color: var(--text-secondary); }
     
     .case-signal {
-      padding: 8px 14px; border-radius: 6px;
+      padding: 4px 10px; border-radius: 4px;
       background: var(--bg-surface-elevated); border: 1px solid var(--border-default);
-      text-align: center; min-width: 130px;
+      text-align: center;
     }
     .case-signal-label {
-      font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px;
+      font-size: 8px; font-weight: 800; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 1px;
       font-family: ui-monospace, monospace;
     }
-    .case-signal-value { font-size: 16px; font-weight: 800; font-family: ui-monospace, monospace; color: var(--tactical-blue); }
+    .case-signal-value { font-size: 13px; font-weight: 800; font-family: ui-monospace, monospace; color: var(--tactical-blue); }
 
     .triage-select {
       background: var(--bg-surface-elevated); border: 1px solid var(--border-default);
-      color: var(--text-primary); border-radius: 4px; padding: 4px 8px;
-      font-size: 11px; font-weight: 600;
+      color: var(--text-primary); border-radius: 4px; padding: 3px 6px;
+      font-size: 10px; font-weight: 600;
     }
     .btn-sm {
       background: var(--bg-surface-highlight); color: var(--text-primary);
       border: 1px solid var(--border-default);
-      padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;
+      padding: 3px 7px; border-radius: 4px; font-size: 10px; font-weight: 600;
       transition: all 0.15s;
     }
     .btn-sm:hover { background: var(--tactical-blue); color: #000; border-color: var(--tactical-blue); }
@@ -391,7 +379,7 @@ INDEX = r'''<!doctype html>
     .action-btn {
       background: var(--bg-surface-elevated); color: var(--text-primary);
       border: 1px solid var(--border-default);
-      padding: 7px 12px; border-radius: 5px; font-size: 12px; font-weight: 600;
+      padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: 600;
       transition: all 0.15s ease;
     }
     .action-btn:hover {
@@ -409,8 +397,8 @@ INDEX = r'''<!doctype html>
 
     /* Status strip */
     #status {
-      padding: 5px 28px;
-      font-size: 11px; color: var(--success-green); min-height: 26px;
+      padding: 4px 16px;
+      font-size: 10px; color: var(--success-green); min-height: 22px;
       border-bottom: 1px solid var(--border-subtle);
       background: var(--bg-base); font-family: ui-monospace, monospace;
       display: flex; align-items: center;
@@ -418,18 +406,18 @@ INDEX = r'''<!doctype html>
 
     /* ── TABS ── */
     .tabbar {
-      display: flex; gap: 2px; overflow-x: auto; padding: 0 24px;
+      display: flex; gap: 2px; overflow-x: auto; padding: 0 14px;
       background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle);
       scrollbar-width: none;
     }
     .tabbar::-webkit-scrollbar { display: none; }
     .tab {
-      min-height: 42px; padding: 0 14px; border: none;
+      min-height: 36px; padding: 0 11px; border: none;
       border-bottom: 2px solid transparent;
       background: transparent; color: var(--text-muted);
-      white-space: nowrap; font-size: 12px; font-weight: 600;
+      white-space: nowrap; font-size: 11px; font-weight: 600;
       transition: all 0.15s ease;
-      display: flex; align-items: center; gap: 6px;
+      display: flex; align-items: center; gap: 5px;
     }
     .tab:hover { color: var(--text-primary); }
     .tab[aria-selected="true"] {
@@ -437,139 +425,139 @@ INDEX = r'''<!doctype html>
       border-bottom-color: var(--tactical-blue);
       background: rgba(56, 189, 248, 0.04);
     }
-    .tab-icon { font-size: 13px; }
+    .tab-icon { font-size: 12px; }
 
     /* ── PANELS ── */
-    .panel { display: none; padding: 24px 28px; }
-    .panel.active { display: block; animation: panelFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+    .panel { display: none; padding: 14px 16px; }
+    .panel.active { display: block; animation: panelFadeIn 0.15s ease; }
 
     /* ── GRID HELPERS ── */
-    .split { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.85fr); gap: 18px; }
-    .stack { display: flex; flex-direction: column; gap: 16px; }
+    .split { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.85fr); gap: 12px; }
+    .stack { display: flex; flex-direction: column; gap: 10px; }
 
     /* ── CARDS ── */
     .card {
       background: var(--bg-surface); border: 1px solid var(--border-default);
-      border-radius: 8px; padding: 18px 20px;
+      border-radius: 6px; padding: 12px 14px;
     }
-    .card h2 { font-size: 14px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; letter-spacing: -0.01em; }
-    .card h3 { font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; }
-    .card p { font-size: 12px; color: var(--text-muted); margin-bottom: 0; }
-    .decision-copy { font-size: 13px; color: var(--text-primary); line-height: 1.6; }
+    .card h2 { font-size: 13px; font-weight: 800; color: var(--text-primary); margin-bottom: 3px; letter-spacing: -0.01em; }
+    .card h3 { font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 3px; }
+    .card p { font-size: 11px; color: var(--text-muted); margin-bottom: 0; }
+    .decision-copy { font-size: 12px; color: var(--text-primary); line-height: 1.55; }
 
     /* ── METRIC GRID ── */
-    .metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-top: 12px; }
+    .metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
     .metric {
-      padding: 12px 14px; border-radius: 6px;
+      padding: 9px 11px; border-radius: 5px;
       background: var(--bg-base); border: 1px solid var(--border-default);
     }
     .metric-label {
-      display: block; font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;
+      display: block; font-size: 8px; font-weight: 800; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 3px;
       font-family: ui-monospace, monospace;
     }
     .metric-value {
-      display: block; font-size: 22px; font-weight: 800; line-height: 1;
+      display: block; font-size: 17px; font-weight: 800; line-height: 1;
       font-family: ui-monospace, monospace;
     }
     .metric-value.conf { color: var(--tactical-blue); }
     .metric-value.sev { color: var(--danger-red); }
     .metric-value.impact { color: var(--purple-intel); }
     .metric-value.urgency { color: var(--warning-amber); }
-    .metric-note { display: block; font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+    .metric-note { display: block; font-size: 9px; color: var(--text-muted); margin-top: 3px; }
 
     /* ── PROMOTION CHECKS ── */
-    .check-list { list-style: none; display: grid; gap: 8px; margin-top: 12px; }
-    .check-list li { display: flex; align-items: flex-start; gap: 10px; }
+    .check-list { list-style: none; display: grid; gap: 6px; margin-top: 8px; }
+    .check-list li { display: flex; align-items: flex-start; gap: 8px; }
     .check-mark {
-      flex-shrink: 0; width: 18px; height: 18px; border-radius: 4px;
-      display: grid; place-items: center; font-size: 10px; font-weight: 900;
+      flex-shrink: 0; width: 16px; height: 16px; border-radius: 3px;
+      display: grid; place-items: center; font-size: 9px; font-weight: 900;
       margin-top: 1px; font-family: ui-monospace, monospace;
     }
     .check-mark.pass { background: var(--success-green-dim); color: var(--success-green); border: 1px solid var(--success-green-border); }
     .check-mark.fail { background: var(--danger-red-dim); color: var(--danger-red); border: 1px solid var(--danger-red-border); }
-    .check-label { font-size: 12px; font-weight: 700; color: var(--text-primary); }
-    .check-detail { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .check-label { font-size: 11px; font-weight: 700; color: var(--text-primary); }
+    .check-detail { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
 
     /* ── NOT-PROMOTED CANDIDATES ── */
     .not-promoted-card {
-      padding: 12px 14px; border: 1px solid var(--border-default);
-      border-radius: 6px; background: var(--bg-base);
+      padding: 9px 11px; border: 1px solid var(--border-default);
+      border-radius: 5px; background: var(--bg-base);
     }
-    .np-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-    .np-id { font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+    .np-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 3px; }
+    .np-id { font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700; color: var(--text-secondary); }
     .np-badge {
-      padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 800; letter-spacing: 0.06em;
+      padding: 1px 5px; border-radius: 3px; font-size: 8px; font-weight: 800; letter-spacing: 0.06em;
       background: var(--bg-surface-elevated); color: var(--text-muted); border: 1px solid var(--border-default);
       font-family: ui-monospace, monospace; text-transform: uppercase;
     }
-    .np-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; font-family: ui-monospace, monospace; }
-    .np-checks { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+    .np-meta { font-size: 10px; color: var(--text-muted); margin-bottom: 4px; font-family: ui-monospace, monospace; }
+    .np-checks { display: flex; flex-wrap: wrap; gap: 3px; margin-bottom: 4px; }
     .check-pill {
-      padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600;
+      padding: 1px 5px; border-radius: 3px; font-size: 9px; font-weight: 600;
       font-family: ui-monospace, monospace;
     }
     .check-pill.pass { background: var(--success-green-dim); color: var(--success-green); border: 1px solid var(--success-green-border); }
     .check-pill.fail { background: var(--danger-red-dim); color: var(--danger-red); border: 1px solid var(--danger-red-border); }
-    .np-reason { font-size: 11px; color: var(--danger-red); }
+    .np-reason { font-size: 10px; color: var(--danger-red); }
 
     /* ── SOURCE BADGES ── */
     .source-badge {
-      display: inline-block; padding: 2px 6px; border-radius: 3px;
-      font-size: 9px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      display: inline-block; padding: 1px 5px; border-radius: 3px;
+      font-size: 8px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase;
       font-family: ui-monospace, monospace;
     }
-    .src-siem { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); }
-    .src-endpoint { background: rgba(129, 140, 248, 0.12); color: #a5b4fc; border: 1px solid rgba(129, 140, 248, 0.3); }
-    .src-network_sensor { background: rgba(20, 184, 166, 0.12); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.3); }
-    .src-threat_intel_report { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
-    .src-opensky_airspace, .src-airspace { background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); }
-    .src-maritime_ais, .src-maritime { background: rgba(45, 212, 191, 0.15); color: #2dd4bf; border: 1px solid rgba(45, 212, 191, 0.35); }
-    .src-copernicus_sentinel, .src-satellite_eo { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); }
-    .src-nasa_firms, .src-thermal_ir { background: rgba(244, 63, 94, 0.15); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.35); }
-    .src-imd_weather, .src-weather_env { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); }
-    .src-isro_bhuvan, .src-geospatial_infra { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
-    .src-emergency_usgs, .src-geophysical { background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.35); }
-    .src-satellite_sensor, .src-cyber_c2 { background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.35); }
+    .src-siem { background: rgba(56, 189, 248, 0.10); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.25); }
+    .src-endpoint { background: rgba(129, 140, 248, 0.10); color: #a5b4fc; border: 1px solid rgba(129, 140, 248, 0.25); }
+    .src-network_sensor { background: rgba(20, 184, 166, 0.10); color: #2dd4bf; border: 1px solid rgba(20, 184, 166, 0.25); }
+    .src-threat_intel_report { background: rgba(245, 158, 11, 0.10); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.25); }
+    .src-opensky_airspace, .src-airspace { background: rgba(56, 189, 248, 0.12); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.30); }
+    .src-maritime_ais, .src-maritime { background: rgba(45, 212, 191, 0.12); color: #2dd4bf; border: 1px solid rgba(45, 212, 191, 0.30); }
+    .src-copernicus_sentinel, .src-satellite_eo { background: rgba(168, 85, 247, 0.12); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.30); }
+    .src-nasa_firms, .src-thermal_ir { background: rgba(244, 63, 94, 0.12); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.30); }
+    .src-imd_weather, .src-weather_env { background: rgba(245, 158, 11, 0.12); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.30); }
+    .src-isro_bhuvan, .src-geospatial_infra { background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.30); }
+    .src-emergency_usgs, .src-geophysical { background: rgba(234, 179, 8, 0.12); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.30); }
+    .src-satellite_sensor, .src-cyber_c2 { background: rgba(99, 102, 241, 0.12); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.30); }
 
     /* ── TIMELINE ── */
-    .timeline { position: relative; display: grid; gap: 0; margin-top: 10px; }
-    .timeline-item { display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 12px; padding-bottom: 14px; position: relative; }
+    .timeline { position: relative; display: grid; gap: 0; margin-top: 8px; }
+    .timeline-item { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; padding-bottom: 10px; position: relative; }
     .timeline-item:not(:last-child)::before {
-      content: ""; position: absolute; left: 59px; top: 24px; bottom: 0; width: 1px;
+      content: ""; position: absolute; left: 51px; top: 18px; bottom: 0; width: 1px;
       background: var(--border-subtle);
     }
     .ttime {
       color: var(--text-muted); font-family: ui-monospace, monospace;
-      font-size: 10px; font-weight: 700; padding-top: 6px; text-align: right;
+      font-size: 9px; font-weight: 700; padding-top: 4px; text-align: right;
     }
     .evidence {
-      position: relative; padding: 10px 12px;
+      position: relative; padding: 8px 10px;
       background: var(--bg-base); border: 1px solid var(--border-default);
-      border-radius: 6px; transition: border-color 0.15s ease;
+      border-radius: 5px; transition: border-color 0.12s ease;
     }
     .evidence:hover { border-color: var(--border-strong); }
     .evidence::before {
-      content: ""; position: absolute; top: 12px; left: -6px;
-      width: 10px; height: 10px; border-radius: 50%;
+      content: ""; position: absolute; top: 10px; left: -5px;
+      width: 8px; height: 8px; border-radius: 50%;
       background: var(--bg-surface); border: 2px solid var(--tactical-blue);
     }
-    .evidence-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
-    .evidence-title { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+    .evidence-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; margin-bottom: 3px; }
+    .evidence-title { font-size: 11px; font-weight: 700; color: var(--text-primary); }
     .technique-tag {
-      font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700;
+      font-family: ui-monospace, monospace; font-size: 9px; font-weight: 700;
       color: var(--tactical-blue); background: var(--tactical-blue-dim);
       border: 1px solid var(--tactical-blue-border); border-radius: 3px;
-      display: inline-block; padding: 1px 6px;
+      display: inline-block; padding: 1px 5px;
     }
-    .evidence-reason { font-size: 11px; color: var(--text-secondary); margin-top: 4px; line-height: 1.45; }
+    .evidence-reason { font-size: 10px; color: var(--text-secondary); margin-top: 3px; line-height: 1.4; }
 
     /* ── FILTERS ── */
-    .filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
     .filter {
-      padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 600;
+      padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 600;
       border: 1px solid var(--border-default); background: var(--bg-base); color: var(--text-secondary);
-      transition: all 0.15s ease;
+      transition: all 0.12s ease;
     }
     .filter:hover { border-color: var(--border-strong); color: var(--text-primary); }
     .filter[aria-pressed="true"] {
@@ -578,34 +566,34 @@ INDEX = r'''<!doctype html>
     }
 
     /* ── ASSETS ── */
-    .asset-list { display: grid; gap: 6px; margin-top: 8px; }
-    .asset-card { padding: 8px 10px; background: var(--bg-base); border: 1px solid var(--border-default); border-radius: 6px; }
-    .asset-name { font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; color: var(--text-primary); }
-    .asset-role { font-size: 11px; color: var(--text-secondary); margin-top: 1px; }
-    .asset-crit { font-size: 10px; color: var(--text-muted); margin-top: 1px; font-family: ui-monospace, monospace; }
-    .crit-bar { height: 3px; border-radius: 2px; background: var(--border-subtle); margin-top: 5px; overflow: hidden; }
+    .asset-list { display: grid; gap: 5px; margin-top: 6px; }
+    .asset-card { padding: 6px 8px; background: var(--bg-base); border: 1px solid var(--border-default); border-radius: 5px; }
+    .asset-name { font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700; color: var(--text-primary); }
+    .asset-role { font-size: 10px; color: var(--text-secondary); margin-top: 1px; }
+    .asset-crit { font-size: 9px; color: var(--text-muted); margin-top: 1px; font-family: ui-monospace, monospace; }
+    .crit-bar { height: 3px; border-radius: 2px; background: var(--border-subtle); margin-top: 4px; overflow: hidden; }
     .crit-fill { height: 100%; border-radius: 2px; background: var(--warning-amber); }
 
     /* ── UNCERTAINTY NOTICE ── */
     .notice {
-      padding: 10px 12px; border-radius: 6px;
+      padding: 8px 10px; border-radius: 5px;
       background: var(--bg-base); border: 1px solid var(--warning-amber-border);
-      color: var(--warning-amber); font-size: 11px; margin-top: 10px; line-height: 1.45;
+      color: var(--warning-amber); font-size: 10px; margin-top: 8px; line-height: 1.45;
     }
 
     /* ── BRIEF ── */
-    .brief-section { padding: 12px 0; border-bottom: 1px solid var(--border-subtle); }
+    .brief-section { padding: 9px 0; border-bottom: 1px solid var(--border-subtle); }
     .brief-section:last-of-type { border-bottom: none; }
     .brief-label {
-      font-size: 9px; font-weight: 800; letter-spacing: 0.1em;
-      text-transform: uppercase; color: var(--tactical-blue); margin-bottom: 4px;
+      font-size: 8px; font-weight: 800; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--tactical-blue); margin-bottom: 3px;
       font-family: ui-monospace, monospace;
     }
-    .brief-text { font-size: 12px; color: var(--text-primary); line-height: 1.6; }
-    .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .brief-text { font-size: 11px; color: var(--text-primary); line-height: 1.55; }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .button {
-      min-height: 34px; padding: 6px 14px; border-radius: 5px;
-      font-size: 12px; font-weight: 600; border: 1px solid var(--tactical-blue);
+      min-height: 28px; padding: 4px 11px; border-radius: 4px;
+      font-size: 11px; font-weight: 600; border: 1px solid var(--tactical-blue);
       background: var(--tactical-blue); color: #000;
       transition: opacity 0.15s, transform 0.1s;
     }
@@ -617,93 +605,94 @@ INDEX = r'''<!doctype html>
     .button.secondary:hover { background: var(--bg-surface-highlight); border-color: var(--border-strong); }
 
     /* ── ACTION LIST (runbook) ── */
-    .action-list { list-style: none; display: grid; gap: 8px; margin-top: 10px; }
+    .action-list { list-style: none; display: grid; gap: 6px; margin-top: 8px; }
     .action-item {
-      padding: 10px 12px; border-radius: 6px;
+      padding: 8px 10px; border-radius: 5px;
       background: var(--bg-base); border: 1px solid var(--border-default);
       border-left: 3px solid var(--tactical-blue);
     }
     .action-phase {
-      display: inline-block; padding: 1px 6px; border-radius: 3px;
-      font-size: 9px; font-weight: 800; text-transform: uppercase;
-      letter-spacing: 0.06em; margin-bottom: 4px; font-family: ui-monospace, monospace;
+      display: inline-block; padding: 1px 5px; border-radius: 3px;
+      font-size: 8px; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.05em; margin-bottom: 3px; font-family: ui-monospace, monospace;
     }
     .phase-Containment { background: var(--danger-red-dim); color: var(--danger-red); border: 1px solid var(--danger-red-border); }
     .phase-Eradication { background: var(--warning-amber-dim); color: var(--warning-amber); border: 1px solid var(--warning-amber-border); }
     .phase-Detection { background: var(--tactical-blue-dim); color: var(--tactical-blue); border: 1px solid var(--tactical-blue-border); }
-    .action-priority { display: inline-block; margin-left: 6px; font-size: 10px; font-weight: 700; color: var(--text-muted); font-family: ui-monospace, monospace; }
-    .action-text { font-size: 12px; color: var(--text-primary); line-height: 1.5; }
-    .action-target { font-size: 11px; color: var(--text-muted); margin-top: 3px; font-family: ui-monospace, monospace; }
+    .action-priority { display: inline-block; margin-left: 5px; font-size: 9px; font-weight: 700; color: var(--text-muted); font-family: ui-monospace, monospace; }
+    .action-text { font-size: 11px; color: var(--text-primary); line-height: 1.45; }
+    .action-target { font-size: 10px; color: var(--text-muted); margin-top: 2px; font-family: ui-monospace, monospace; }
 
     /* ── COMPARE PANEL ── */
-    .compare-funnel { display: flex; align-items: center; justify-content: center; gap: 0; margin: 16px 0; }
+    .compare-funnel { display: flex; align-items: center; justify-content: center; gap: 0; margin: 12px 0; }
     .funnel-box {
-      text-align: center; padding: 14px 20px;
+      text-align: center; padding: 10px 16px;
       background: var(--bg-base); border: 1px solid var(--border-default);
-      border-radius: 6px; min-width: 140px;
+      border-radius: 5px; min-width: 120px;
     }
-    .funnel-big { font-size: 36px; font-weight: 900; line-height: 1; display: block; font-family: ui-monospace, monospace; }
+    .funnel-big { font-size: 28px; font-weight: 900; line-height: 1; display: block; font-family: ui-monospace, monospace; }
     .funnel-big.raw { color: var(--text-secondary); }
     .funnel-big.cand { color: var(--warning-amber); }
     .funnel-big.prom { color: var(--success-green); }
-    .funnel-desc { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
-    .funnel-big-arrow { font-size: 22px; color: var(--text-faint); padding: 0 10px; }
-    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
-    .compare-card { background: var(--bg-base); border: 1px solid var(--border-default); border-radius: 6px; padding: 14px; }
+    .funnel-desc { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
+    .funnel-big-arrow { font-size: 18px; color: var(--text-faint); padding: 0 8px; }
+    .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .compare-card { background: var(--bg-base); border: 1px solid var(--border-default); border-radius: 5px; padding: 10px 12px; }
     .compare-card.bad { border-left: 3px solid var(--danger-red); }
     .compare-card.good { border-left: 3px solid var(--success-green); }
-    .compare-card-title { font-size: 12px; font-weight: 800; margin-bottom: 8px; }
+    .compare-card-title { font-size: 11px; font-weight: 800; margin-bottom: 6px; }
     .compare-card.bad .compare-card-title { color: var(--danger-red); }
     .compare-card.good .compare-card-title { color: var(--success-green); }
-    .plain-list { list-style: none; display: grid; gap: 5px; }
-    .plain-list li { font-size: 12px; color: var(--text-secondary); padding-left: 12px; position: relative; }
+    .plain-list { list-style: none; display: grid; gap: 4px; }
+    .plain-list li { font-size: 11px; color: var(--text-secondary); padding-left: 10px; position: relative; }
     .plain-list li::before { content: "•"; position: absolute; left: 0; color: var(--text-muted); }
 
     /* ── BOB PANEL ── */
     .mcp-command {
-      display: flex; align-items: center; justify-content: space-between; gap: 10px;
-      padding: 10px 12px; background: var(--bg-base); border: 1px solid var(--border-default);
-      border-radius: 6px; transition: border-color 0.15s ease;
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 8px 10px; background: var(--bg-base); border: 1px solid var(--border-default);
+      border-radius: 5px; transition: border-color 0.12s ease;
     }
     .mcp-command:hover { border-color: var(--border-strong); }
-    .mcp-cmd-code { font-family: ui-monospace, monospace; font-size: 12px; color: var(--tactical-blue); font-weight: 700; }
-    .mcp-cmd-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-    .mcp-tools-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+    .mcp-cmd-code { font-family: ui-monospace, monospace; font-size: 11px; color: var(--tactical-blue); font-weight: 700; }
+    .mcp-cmd-desc { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+    .mcp-tools-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
     .tool-btn {
-      padding: 6px 12px; border-radius: 4px; font-size: 11px; font-weight: 600;
+      padding: 4px 9px; border-radius: 4px; font-size: 10px; font-weight: 600;
       background: var(--bg-base); border: 1px solid var(--border-default); color: var(--text-secondary);
-      transition: all 0.15s ease; font-family: ui-monospace, monospace;
+      transition: all 0.12s ease; font-family: ui-monospace, monospace;
     }
     .tool-btn:hover { border-color: var(--tactical-blue); color: var(--tactical-blue); background: var(--tactical-blue-dim); }
     .tool-output {
-      min-height: 160px; max-height: 380px; overflow-y: auto;
-      padding: 12px; border-radius: 6px;
+      min-height: 140px; max-height: 340px; overflow-y: auto;
+      padding: 10px; border-radius: 5px;
       background: #05080c; border: 1px solid var(--border-default);
-      color: #38bdf8; font-family: ui-monospace, monospace; font-size: 11px;
-      line-height: 1.55; white-space: pre-wrap;
+      color: #38bdf8; font-family: ui-monospace, monospace; font-size: 10px;
+      line-height: 1.5; white-space: pre-wrap;
     }
 
     /* ── EMPTY / LOADING ── */
-    .empty { padding: 24px; text-align: center; color: var(--text-muted); font-size: 12px; }
+    .empty { padding: 18px; text-align: center; color: var(--text-muted); font-size: 11px; }
     .loading-pulse { animation: pulseLive 1.4s ease-in-out infinite; }
 
     /* ── RESPONSIVE ── */
     @media (max-width: 960px) {
       .layout { grid-template-columns: 1fr; }
       .case-rail { border-right: none; border-bottom: 1px solid var(--border-subtle); }
-      .case-list { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); display: grid; }
+      .case-list { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); display: grid; }
       .split { grid-template-columns: 1fr; }
     }
     @media (max-width: 640px) {
-      .topbar { height: auto; padding: 10px 14px; flex-wrap: wrap; }
-      .tabbar { padding: 0 10px; }
-      .panel { padding: 14px; }
+      .topbar { height: auto; padding: 8px 12px; flex-wrap: wrap; gap: 8px; }
+      .topbar-search-wrap { max-width: 100%; order: 3; width: 100%; }
+      .tabbar { padding: 0 8px; }
+      .panel { padding: 10px 12px; }
       .metric-grid { grid-template-columns: 1fr; }
       .compare-grid { grid-template-columns: 1fr; }
-      .timeline-item { grid-template-columns: 1fr; gap: 4px; }
+      .timeline-item { grid-template-columns: 1fr; gap: 3px; }
       .timeline-item::before { display: none; }
       .evidence::before { display: none; }
-      .compare-funnel { flex-direction: column; gap: 6px; }
+      .compare-funnel { flex-direction: column; gap: 4px; }
       .funnel-big-arrow { transform: rotate(90deg); }
     }
   </style>
@@ -724,6 +713,15 @@ INDEX = r'''<!doctype html>
           <div class="brand-sub">Evidence-first deterministic intelligence &amp; telemetry workspace</div>
         </div>
       </div>
+
+      <!-- Integrated Topbar Command Search -->
+      <div class="topbar-search-wrap">
+        <span class="topbar-search-icon">🔍</span>
+        <input id="search-input" class="topbar-search-input" type="text" placeholder="Search indicators — IP, host, CVE, user, IOC hash… (Press Enter)" autocomplete="off">
+        <button id="search-btn" class="topbar-search-btn">↵</button>
+        <div id="search-results" class="search-results"></div>
+      </div>
+
       <div class="topbar-right">
         <button id="btn-open-sim" class="topbar-btn primary" title="Simulate Multi-Source Threat Feeds">🛰️ Ingest Feeds</button>
         <button id="btn-reset-demo" class="topbar-btn" title="Reset Demo Data">↺ Reset Demo</button>
@@ -731,16 +729,6 @@ INDEX = r'''<!doctype html>
         <div class="topbar-meta">ATT&CK v19.2 · IBM Bob MCP</div>
       </div>
     </header>
-
-    <!-- SEARCH BAR -->
-    <div class="search-bar-wrap">
-      <div class="search-input-wrap">
-        <span class="search-icon">🔍</span>
-        <input id="search-input" class="search-input" type="text" placeholder="Search indicators — IP, host, CVE, user, IOC hash, keyword… (Press Enter)" autocomplete="off">
-        <div id="search-results" class="search-results"></div>
-      </div>
-      <button id="search-btn" class="search-btn">Search Corpus</button>
-    </div>
 
     <div class="layout">
 
@@ -754,7 +742,7 @@ INDEX = r'''<!doctype html>
 
         <!-- Funnel numbers -->
         <div class="funnel-banner" id="funnel-banner">
-          <div class="funnel-step"><div class="funnel-num raw" id="f-raw">—</div><div class="funnel-label">Raw Alerts</div></div>
+          <div class="funnel-step"><div class="funnel-num raw" id="f-raw">—</div><div class="funnel-label">Raw</div></div>
           <div class="funnel-arrow">›</div>
           <div class="funnel-step"><div class="funnel-num cand" id="f-cand">—</div><div class="funnel-label">Candidates</div></div>
           <div class="funnel-arrow">›</div>
@@ -782,16 +770,16 @@ INDEX = r'''<!doctype html>
             <div id="case-title" class="case-title loading-pulse">Loading…</div>
             <div id="case-summary" class="case-summary-text">Preparing evidence sequence…</div>
           </div>
-          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-            <div style="display:flex; gap:8px; align-items:center;">
-              <button id="btn-ask-bob-header" class="topbar-btn primary" style="background:var(--tactical-blue);color:#000;border-color:var(--tactical-blue);font-weight:700;padding:5px 12px;font-size:12px;cursor:pointer;" onclick="openBobModal(selected ? selected.id : '', 'investigate')">🤖 Ask IBM Bob</button>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+            <div style="display:flex; gap:6px; align-items:center;">
+              <button id="btn-ask-bob-header" class="topbar-btn primary" style="background:var(--tactical-blue);color:#000;border-color:var(--tactical-blue);font-weight:700;padding:4px 10px;font-size:11px;cursor:pointer;" onclick="openBobModal(selected ? selected.id : '', 'investigate')">🤖 Ask IBM Bob</button>
               <div class="case-signal">
                 <div class="case-signal-label">Assessed Priority</div>
                 <div id="case-priority" class="case-signal-value">—</div>
               </div>
             </div>
-            <div style="display:flex; gap:6px; align-items:center;">
-              <span style="font-size:10px; color:var(--text-muted); font-weight:800; font-family:ui-monospace,monospace;">STATUS</span>
+            <div style="display:flex; gap:5px; align-items:center;">
+              <span style="font-size:9px; color:var(--text-muted); font-weight:800; font-family:ui-monospace,monospace;">STATUS</span>
               <select id="case-status-select" class="triage-select">
                 <option value="open">Open</option>
                 <option value="investigating">Investigating</option>
@@ -838,12 +826,12 @@ INDEX = r'''<!doctype html>
               <article class="card">
                 <p class="eyebrow">Executive Decision Synthesis</p>
                 <h2>Operational Assessment</h2>
-                <p id="decision-copy" class="decision-copy loading-pulse" style="margin-top:8px;">Loading…</p>
+                <p id="decision-copy" class="decision-copy loading-pulse" style="margin-top:6px;">Loading…</p>
               </article>
               <article class="card">
                 <p class="eyebrow">Attack-Flow Chronology</p>
                 <h2>Observed Behavior Progression (First 5 Events)</h2>
-                <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">Correlated chain across independent sensors. See <em>Evidence Sequence</em> for complete telemetry.</p>
+                <p style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">Correlated chain across independent sensors. See <em>Evidence Sequence</em> for complete telemetry.</p>
                 <div id="overview-timeline" class="timeline"></div>
               </article>
             </div>
@@ -851,7 +839,7 @@ INDEX = r'''<!doctype html>
               <article class="card">
                 <p class="eyebrow">4D Risk Assessment</p>
                 <h2>Deterministic Severity Breakdown</h2>
-                <p style="font-size:11px;color:var(--text-muted);">Decoupled scoring dimensions providing explainable risk provenance.</p>
+                <p style="font-size:10px;color:var(--text-muted);">Decoupled scoring dimensions providing explainable risk provenance.</p>
                 <div id="metric-grid" class="metric-grid"></div>
               </article>
               <article class="card">
@@ -867,11 +855,11 @@ INDEX = r'''<!doctype html>
               </article>
               <article class="card">
                 <p class="eyebrow">Analyst Triage &amp; Notes</p>
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                   <h2>Investigation Journal</h2>
                   <button id="btn-save-notes" class="btn-sm">Save Notes</button>
                 </div>
-                <textarea id="case-notes-input" placeholder="Record investigation findings, hypotheses, containment actions..." style="width:100%;height:68px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);padding:8px;font-size:11px;font-family:inherit;resize:vertical;"></textarea>
+                <textarea id="case-notes-input" placeholder="Record investigation findings, hypotheses, containment actions..." style="width:100%;height:58px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:5px;color:var(--text-primary);padding:6px;font-size:10px;font-family:inherit;resize:vertical;"></textarea>
               </article>
             </div>
           </div>
@@ -882,40 +870,40 @@ INDEX = r'''<!doctype html>
           <div class="split">
             <div class="stack">
               <article class="card">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
                   <div>
                     <p class="eyebrow">Multi-Domain Public Telemetry Engine</p>
                     <h2>Strategic Border &amp; Maritime Sectors (India Context)</h2>
                   </div>
                   <button id="btn-ask-bob-defence" class="topbar-btn primary" style="font-weight:700;" onclick="openBobModal(selected ? selected.id : '', 'defence')">🤖 Sector Defence Brief</button>
                 </div>
-                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">
+                <p style="font-size:11px;color:var(--text-secondary);margin-bottom:10px;">
                   Unified multi-domain situational awareness cross-correlating civil ADS-B (OpenSky), vessel AIS (NOAA), radar &amp; optical change detection (Copernicus Sentinel-1/2), thermal hotspots (NASA FIRMS), and weather warnings (IMD).
                 </p>
                 <!-- Strategic Sector Cards -->
-                <div id="defence-sectors-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:14px;"></div>
+                <div id="defence-sectors-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-bottom:10px;"></div>
                 
                 <!-- Domain Filter Toolbar -->
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
-                  <h3 style="font-size:12px;color:var(--text-primary);margin:0;">Sector Radar &amp; Telemetry Stream</h3>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;margin-bottom:6px;flex-wrap:wrap;gap:6px;">
+                  <h3 style="font-size:11px;color:var(--text-primary);margin:0;">Sector Radar &amp; Telemetry Stream</h3>
                   <div id="radar-domain-filters" class="filters" style="margin:0;"></div>
                 </div>
 
                 <!-- Radar Observation Table -->
-                <div style="max-height:420px;overflow-y:auto;border:1px solid var(--border-default);border-radius:6px;background:#05080c;">
-                  <table style="width:100%;border-collapse:collapse;font-size:11px;font-family:ui-monospace,monospace;color:var(--text-secondary);">
+                <div style="max-height:360px;overflow-y:auto;border:1px solid var(--border-default);border-radius:5px;background:#05080c;">
+                  <table style="width:100%;border-collapse:collapse;font-size:10px;font-family:ui-monospace,monospace;color:var(--text-secondary);">
                     <thead>
                       <tr style="background:var(--bg-surface-elevated);border-bottom:1px solid var(--border-default);color:var(--text-primary);text-align:left;">
-                        <th style="padding:6px 10px;">Domain</th>
-                        <th style="padding:6px 10px;">Entity / Call / MMSI</th>
-                        <th style="padding:6px 10px;">Sector &amp; Coordinates</th>
-                        <th style="padding:6px 10px;">Telemetry Metrics</th>
-                        <th style="padding:6px 10px;">Observation Detail</th>
-                        <th style="padding:6px 10px;text-align:right;">Action</th>
+                        <th style="padding:5px 8px;">Domain</th>
+                        <th style="padding:5px 8px;">Entity / Call / MMSI</th>
+                        <th style="padding:5px 8px;">Sector &amp; Coordinates</th>
+                        <th style="padding:5px 8px;">Telemetry Metrics</th>
+                        <th style="padding:5px 8px;">Observation Detail</th>
+                        <th style="padding:5px 8px;text-align:right;">Action</th>
                       </tr>
                     </thead>
                     <tbody id="radar-table-body">
-                      <tr><td colspan="6" style="padding:16px;text-align:center;color:var(--text-muted);">Loading radar telemetry…</td></tr>
+                      <tr><td colspan="6" style="padding:14px;text-align:center;color:var(--text-muted);">Loading radar telemetry…</td></tr>
                     </tbody>
                   </table>
                 </div>
@@ -925,10 +913,10 @@ INDEX = r'''<!doctype html>
               <article class="card">
                 <p class="eyebrow">Public Feeds Ingestion &amp; Live Scenario Injectors</p>
                 <h2>Inject Multi-Domain Defence Scenarios</h2>
-                <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">
+                <p style="font-size:10px;color:var(--text-muted);margin-bottom:10px;">
                   Inject public multi-source telemetry to test real-time cross-domain spatial correlation without breaking cyber benchmarks:
                 </p>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <div style="display:flex;gap:6px;flex-wrap:wrap;">
                   <button id="sim-airspace-btn" class="action-btn">✈️ Airspace Approach (OpenSky ADS-B)</button>
                   <button id="sim-maritime-btn" class="action-btn">🚢 Maritime Dark Vessel (AIS + SAR)</button>
                   <button id="sim-sentinel-btn" class="action-btn">🛰️ Ground Change (Sentinel-1 SAR)</button>
@@ -944,21 +932,21 @@ INDEX = r'''<!doctype html>
               <article class="card">
                 <p class="eyebrow">Cross-Domain Telemetry Distribution</p>
                 <h2>Monitored Public Feeds</h2>
-                <div id="domain-stats-breakdown" style="display:grid;gap:8px;margin-top:10px;"></div>
+                <div id="domain-stats-breakdown" style="display:grid;gap:6px;margin-top:8px;"></div>
               </article>
 
               <!-- Indian Defence Context & Caveats -->
               <article class="card">
                 <p class="eyebrow">Operational Boundary &amp; Provenance</p>
                 <h2>Zero-Hallucination Public Feeds</h2>
-                <ul class="plain-list" style="margin-top:8px;">
+                <ul class="plain-list" style="margin-top:6px;">
                   <li><strong>Civil Airspace (OpenSky)</strong>: Live civil flight vectors; unannounced transponder gaps flagged as telemetry blindspots.</li>
                   <li><strong>Maritime (AIS &amp; MOSDAC)</strong>: Vessel AIS positions; dark vessels cross-referenced with satellite scatterometry.</li>
                   <li><strong>Radar EO (Copernicus Sentinel-1)</strong>: C-band SAR ground coherence provides all-weather cloud-penetrating change detection.</li>
                   <li><strong>Thermal (NASA FIRMS)</strong>: 375m VIIRS active fire / heat hotspots near forward corridors.</li>
                   <li><strong>Weather (IMD AWS)</strong>: Fog/rain advisories explaining optical sensor degradation.</li>
                 </ul>
-                <div class="notice" style="margin-top:10px;">
+                <div class="notice" style="margin-top:8px;">
                   🔒 <strong>Defensible Separation</strong>: Restricted military radar and classified feeds are not assumed. IBM Bob briefs strictly from verifiable public telemetry.
                 </div>
               </article>
@@ -971,7 +959,7 @@ INDEX = r'''<!doctype html>
           <article class="card">
             <p class="eyebrow">Grounded Chronology</p>
             <h2>Full Evidence Sequence</h2>
-            <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">Every inference links to an immutable source record. Filter telemetry by sensor type:</p>
+            <p style="font-size:10px;color:var(--text-muted);margin-bottom:10px;">Every inference links to an immutable source record. Filter telemetry by sensor type:</p>
             <div id="source-filters" class="filters" aria-label="Filter by source"></div>
             <div id="full-timeline" class="timeline"></div>
           </article>
@@ -983,7 +971,7 @@ INDEX = r'''<!doctype html>
             <article class="card">
               <p class="eyebrow">Executive Intelligence Memo</p>
               <h2>Bottom Line Up Front (BLUF)</h2>
-              <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">Synthesized directly from deterministic engine facts for commander decision-making.</p>
+              <p style="font-size:10px;color:var(--text-muted);margin-bottom:10px;">Synthesized directly from deterministic engine facts for commander decision-making.</p>
               <div id="brief-content"></div>
               <div class="btn-row">
                 <button id="copy-brief" class="button">📋 Copy Brief</button>
@@ -993,7 +981,7 @@ INDEX = r'''<!doctype html>
             <article class="card">
               <p class="eyebrow">Staged Response Actions</p>
               <h2>Analyst-Gated Runbook</h2>
-              <p style="font-size:11px;color:var(--text-muted);margin-bottom:0;">Containment, eradication, and detection actions requiring human confirmation.</p>
+              <p style="font-size:10px;color:var(--text-muted);margin-bottom:0;">Containment, eradication, and detection actions requiring human confirmation.</p>
               <ol id="response-actions" class="action-list"></ol>
             </article>
           </div>
@@ -1004,34 +992,34 @@ INDEX = r'''<!doctype html>
           <article class="card">
             <p class="eyebrow">False-Positive Reduction Funnel</p>
             <h2>From Raw Telemetry to Defensible Incidents</h2>
-            <p style="font-size:11px;color:var(--text-muted);">Real-time metrics demonstrating signal vs noise separation across multi-source feeds.</p>
+            <p style="font-size:10px;color:var(--text-muted);">Real-time metrics demonstrating signal vs noise separation across multi-source feeds.</p>
             <div class="compare-funnel">
               <div class="funnel-box">
                 <span class="funnel-big raw" id="c-raw">—</span>
-                <div class="funnel-desc">Raw Observations<br><span style="font-size:10px;color:var(--text-muted);">4+ Source Schemas</span></div>
+                <div class="funnel-desc">Raw Observations<br><span style="font-size:9px;color:var(--text-muted);">4+ Source Schemas</span></div>
               </div>
               <span class="funnel-big-arrow">→</span>
               <div class="funnel-box">
                 <span class="funnel-big cand" id="c-cand">—</span>
-                <div class="funnel-desc">Candidate Hypotheses<br><span style="font-size:10px;color:var(--text-muted);">Entity + Time Links</span></div>
+                <div class="funnel-desc">Candidate Hypotheses<br><span style="font-size:9px;color:var(--text-muted);">Entity + Time Links</span></div>
               </div>
               <span class="funnel-big-arrow">→</span>
               <div class="funnel-box">
                 <span class="funnel-big prom" id="c-prom">—</span>
-                <div class="funnel-desc">Promoted Incidents<br><span style="font-size:10px;color:var(--text-muted);">Gated Promotion</span></div>
+                <div class="funnel-desc">Promoted Incidents<br><span style="font-size:9px;color:var(--text-muted);">Gated Promotion</span></div>
               </div>
             </div>
           </article>
 
           <!-- NOT PROMOTED candidates -->
-          <article class="card" style="margin-top:14px;">
+          <article class="card" style="margin-top:10px;">
             <p class="eyebrow">Promotion Boundary Audit</p>
             <h2>Unpromoted Candidate Hypotheses</h2>
-            <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">Candidate clusters that did not satisfy all 4 deterministic promotion checks remain auditable below:</p>
-            <div id="not-promoted-list" class="stack" style="gap:8px;"></div>
+            <p style="font-size:10px;color:var(--text-muted);margin-bottom:10px;">Candidate clusters that did not satisfy all 4 deterministic promotion checks remain auditable below:</p>
+            <div id="not-promoted-list" class="stack" style="gap:6px;"></div>
           </article>
 
-          <div class="compare-grid" style="margin-top:14px;">
+          <div class="compare-grid" style="margin-top:10px;">
             <article class="card compare-card bad">
               <div class="compare-card-title">❌ Traditional Alert Flooding (Naïve SIEM)</div>
               <ul class="plain-list">
@@ -1062,10 +1050,10 @@ INDEX = r'''<!doctype html>
               <article class="card">
                 <p class="eyebrow">Multi-Source Telemetry Feeds</p>
                 <h2>Heterogeneous Ingestion (SIEM, Satellite, Cyber, CTI)</h2>
-                <p style="font-size:12px;color:var(--text-secondary);margin-bottom:14px;">
+                <p style="font-size:11px;color:var(--text-secondary);margin-bottom:12px;">
                   Ingest real and synthetic telemetry streams to evaluate real-time candidate clustering, ATT&amp;CK mapping, and false-positive suppression:
                 </p>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;">
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
                   <button id="sim-sat-btn" class="action-btn">🛰️ SPARTA Satellite Feed (Synthetic Demo)</button>
                   <button id="sim-otrf-btn" class="action-btn">💻 OTRF Sysmon Events (Real Sample)</button>
                   <button id="sim-cicids-btn" class="action-btn">🌐 CIC-IDS2017 Flows (Real Sample)</button>
@@ -1074,20 +1062,20 @@ INDEX = r'''<!doctype html>
                   <button id="sim-recent-btn" class="action-btn primary">⚡ Ingest Recent Threats (Sept 18-19, 2026)</button>
                   <button id="sim-all-btn" class="action-btn primary">🚀 Ingest Full Corpus (140+ Alerts)</button>
                 </div>
-                <div style="margin-top:10px;margin-bottom:14px;padding:12px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:6px;">
+                <div style="margin-top:8px;margin-bottom:12px;padding:10px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:5px;">
                   <p class="eyebrow" style="margin-bottom:2px;">CTI Verification</p>
-                  <h3 style="font-size:12px;margin-bottom:2px;color:var(--text-primary);">ThreatFox IOC &amp; CISA KEV Verification</h3>
-                  <p style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">Queries curated offline CTI snapshots ensuring 100% reproducible evaluations.</p>
-                  <div style="display:flex;gap:8px;">
-                    <input id="cti-indicator-input" style="flex:1;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:4px;color:var(--text-primary);padding:6px 10px;font-size:11px;" placeholder="e.g. 185.214.66.91 or CVE-2023-34362">
-                    <button id="btn-cti-lookup" class="action-btn primary" style="font-size:11px;padding:6px 12px;">Query Snapshot</button>
+                  <h3 style="font-size:11px;margin-bottom:2px;color:var(--text-primary);">ThreatFox IOC &amp; CISA KEV Verification</h3>
+                  <p style="font-size:9px;color:var(--text-muted);margin-bottom:6px;">Queries curated offline CTI snapshots ensuring 100% reproducible evaluations.</p>
+                  <div style="display:flex;gap:6px;">
+                    <input id="cti-indicator-input" style="flex:1;background:var(--bg-surface);border:1px solid var(--border-default);border-radius:4px;color:var(--text-primary);padding:5px 8px;font-size:10px;" placeholder="e.g. 185.214.66.91 or CVE-2023-34362">
+                    <button id="btn-cti-lookup" class="action-btn primary" style="font-size:10px;padding:5px 10px;">Query Snapshot</button>
                   </div>
-                  <div id="cti-lookup-result" style="margin-top:8px;font-size:11px;display:none;"></div>
+                  <div id="cti-lookup-result" style="margin-top:6px;font-size:10px;display:none;"></div>
                 </div>
-                <div style="margin-top:10px;">
-                  <label style="font-size:11px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:4px;font-family:ui-monospace,monospace;">Custom Alert JSON Ingestion:</label>
-                  <textarea id="custom-alert-json" style="width:100%;height:90px;font-family:ui-monospace,monospace;font-size:11px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:6px;color:var(--text-primary);padding:8px;" placeholder='{"source":"satellite_sensor", "host":"SAT-GROUND-01", "event_type":"downlink_anomaly", "detail":"SATCOM signal disruption and unauthorized command relay detected"}'></textarea>
-                  <div style="margin-top:8px;display:flex;gap:8px;">
+                <div style="margin-top:8px;">
+                  <label style="font-size:10px;font-weight:700;color:var(--text-secondary);display:block;margin-bottom:3px;font-family:ui-monospace,monospace;">Custom Alert JSON Ingestion:</label>
+                  <textarea id="custom-alert-json" style="width:100%;height:75px;font-family:ui-monospace,monospace;font-size:10px;background:var(--bg-base);border:1px solid var(--border-default);border-radius:5px;color:var(--text-primary);padding:6px;" placeholder='{"source":"satellite_sensor", "host":"SAT-GROUND-01", "event_type":"downlink_anomaly", "detail":"SATCOM signal disruption and unauthorized command relay detected"}'></textarea>
+                  <div style="margin-top:6px;display:flex;gap:6px;">
                     <button id="btn-ingest-custom" class="action-btn primary">Ingest Observation</button>
                     <button id="btn-recorrelate" class="action-btn">Force Re-Correlation</button>
                   </div>
@@ -1098,8 +1086,8 @@ INDEX = r'''<!doctype html>
               <article class="card">
                 <p class="eyebrow">Operational Stream</p>
                 <h2>Recent Ingested Telemetry</h2>
-                <p style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">Raw records stored in SQLite with full provenance tags.</p>
-                <div id="sim-recent-stream" style="max-height:360px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
+                <p style="font-size:10px;color:var(--text-muted);margin-bottom:8px;">Raw records stored in SQLite with full provenance tags.</p>
+                <div id="sim-recent-stream" style="max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:5px;"></div>
               </article>
             </div>
           </div>
@@ -1111,13 +1099,13 @@ INDEX = r'''<!doctype html>
             <article class="card">
               <p class="eyebrow">Natural Language Investigation Layer</p>
               <h2>IBM Bob Grounded Commands</h2>
-              <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;">IBM Bob interfaces with ThreatFusion via Model Context Protocol (MCP). It explains facts and coordinates human workflows without altering deterministic math:</p>
-              <div id="bob-commands" class="stack" style="gap:6px;"></div>
+              <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">IBM Bob interfaces with ThreatFusion via Model Context Protocol (MCP). It explains facts and coordinates human workflows without altering deterministic math:</p>
+              <div id="bob-commands" class="stack" style="gap:5px;"></div>
             </article>
             <article class="card">
               <p class="eyebrow">MCP JSON-RPC Tool Inspector</p>
               <h2>Inspect Telemetry Tools</h2>
-              <p style="font-size:11px;color:var(--text-muted);margin-bottom:12px;">Preview the exact read-only JSON data delivered to IBM Bob:</p>
+              <p style="font-size:10px;color:var(--text-muted);margin-bottom:10px;">Preview the exact read-only JSON data delivered to IBM Bob:</p>
               <div id="mcp-tools" class="mcp-tools-row"></div>
               <pre id="tool-output" class="tool-output">Select an MCP tool above to inspect its deterministic JSON output.</pre>
             </article>
