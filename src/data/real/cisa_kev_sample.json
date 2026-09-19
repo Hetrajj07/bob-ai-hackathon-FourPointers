@@ -1,0 +1,32 @@
+[
+  {
+    "cveID": "CVE-2023-38831",
+    "vendorProject": "RARLAB",
+    "product": "WinRAR",
+    "vulnerabilityName": "RARLAB WinRAR Code Execution Vulnerability",
+    "dateAdded": "2023-08-24",
+    "shortDescription": "A vulnerability in WinRAR allows attackers to execute arbitrary code when a target attempts to view a benign file within a ZIP archive.",
+    "requiredAction": "Apply vendor updates per vendor instructions.",
+    "knownRansomwareCampaignUse": "Known"
+  },
+  {
+    "cveID": "CVE-2023-23397",
+    "vendorProject": "Microsoft",
+    "product": "Outlook",
+    "vulnerabilityName": "Microsoft Outlook Elevation of Privilege Vulnerability",
+    "dateAdded": "2023-03-15",
+    "shortDescription": "Microsoft Outlook contains an elevation of privilege vulnerability that allows NTLM credential theft via specially crafted calendar appointment.",
+    "requiredAction": "Apply vendor updates per vendor instructions.",
+    "knownRansomwareCampaignUse": "Known"
+  },
+  {
+    "cveID": "CVE-2023-34362",
+    "vendorProject": "Progress Software",
+    "product": "MOVEit Transfer",
+    "vulnerabilityName": "Progress MOVEit Transfer SQL Injection Vulnerability",
+    "dateAdded": "2023-06-02",
+    "shortDescription": "Progress MOVEit Transfer contains an SQL injection vulnerability that allows an unauthenticated attacker to gain access to MOVEit Transfer's database.",
+    "requiredAction": "Apply vendor updates per vendor instructions.",
+    "knownRansomwareCampaignUse": "Known"
+  }
+]

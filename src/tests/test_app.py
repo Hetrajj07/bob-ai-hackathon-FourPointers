@@ -87,3 +87,59 @@ def test_candidates_endpoint_returns_promoted_and_unpromoted():
     assert len(unpromoted) == 1
     assert not all(unpromoted[0]["promotion_checks"].values()), \
         "Unpromoted candidate must have at least one failed promotion check"
+
+
+def test_threatfox_and_cisa_kev_endpoints():
+    res_tf = client.get("/api/threatfox/lookup", params={"indicator": "185.214.66.91"})
+    assert res_tf.status_code == 200
+    data_tf = res_tf.json()
+    assert data_tf["found"] is True
+    assert "Cobalt Strike" in data_tf["threat"].get("threat_type_desc", "") or "Cobalt Strike" in data_tf["threat"].get("malware_printable", "")
+
+    res_cisa = client.get("/api/cisa-kev/lookup", params={"cve": "CVE-2023-34362"})
+    assert res_cisa.status_code == 200
+    data_cisa = res_cisa.json()
+    assert data_cisa["found"] is True
+    assert "MOVEit" in data_cisa["vulnerability"].get("vulnerabilityName", "")
+
+
+def test_ingest_otrf_and_cicids_endpoints():
+    # Test OTRF event ingest
+    otrf_sample = {
+        "EventID": 1,
+        "SourceName": "Microsoft-Windows-Sysmon",
+        "TimeCreated": "2026-09-18T14:15:30.124Z",
+        "Computer": "TEST-HOST-01",
+        "EventData": {
+            "RuleName": "technique_id=T1059.001,technique_name=PowerShell",
+            "ProcessId": 9999,
+            "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+            "CommandLine": "powershell.exe -enc AAAA...",
+            "User": "DEFENCE\\analyst1",
+        },
+    }
+    res_otrf = client.post("/api/ingest/otrf", json=otrf_sample)
+    assert res_otrf.status_code == 200
+    assert res_otrf.json()["status"] == "ok"
+    assert res_otrf.json()["inserted_count"] == 1
+
+    # Test CIC-IDS flow ingest
+    flow_sample = {
+        "FlowID": "10.0.0.1-185.214.66.91-12345-443-6",
+        "SourceIp": "10.0.0.1",
+        "SourcePort": 12345,
+        "DestinationIp": "185.214.66.91",
+        "DestinationPort": 443,
+        "Protocol": "TCP",
+        "Timestamp": "2026-09-18T14:28:40Z",
+        "Label": "Botnet-C2-Beaconing",
+        "SensorHost": "NET-PROBE-CORE01",
+    }
+    res_flow = client.post("/api/ingest/cicids", json=flow_sample)
+    assert res_flow.status_code == 200
+    assert res_flow.json()["status"] == "ok"
+    assert res_flow.json()["inserted_count"] == 1
+
+    # Reset back to demo baseline
+    res_reset = client.post("/api/reset")
+    assert res_reset.status_code == 200

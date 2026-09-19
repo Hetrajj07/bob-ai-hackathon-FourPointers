@@ -1,0 +1,37 @@
+[
+  {
+    "_id": "SPARTA-OBS-001",
+    "timestamp": "2026-09-18T14:45:00Z",
+    "source": "satellite_sensor",
+    "event_type": "downlink_rf_anomaly",
+    "host": "SATCOM-GW02",
+    "segment": "link",
+    "sparta_id": "SPARTA-IMP-0001",
+    "detail": "RF Downlink carrier jamming detected on UHF/S-band command channel with -12dB SNR drop.",
+    "protocol": "SATCOM-RF",
+    "src_ip": "198.51.100.45"
+  },
+  {
+    "_id": "SPARTA-OBS-002",
+    "timestamp": "2026-09-18T14:48:30Z",
+    "source": "satellite_telemetry",
+    "event_type": "telemetry_command_relay",
+    "host": "SAT-GROUND-01",
+    "segment": "ground",
+    "sparta_id": "SPARTA-EX-0001",
+    "detail": "Unauthorized command injection into satellite ground tracking relay bus targeting payload controller.",
+    "src_host": "SATCOM-GW02",
+    "dst_host": "SAT-GROUND-01"
+  },
+  {
+    "_id": "SPARTA-OBS-003",
+    "timestamp": "2026-09-18T14:52:10Z",
+    "source": "satellite_sensor",
+    "event_type": "rogue_telemetry_uplink",
+    "host": "DEF-CMD-HQ01",
+    "segment": "space",
+    "sparta_id": "SPARTA-C2-0001",
+    "detail": "Rogue command uplink frame transmitted across tactical satellite network link.",
+    "src_ip": "198.51.100.45"
+  }
+]

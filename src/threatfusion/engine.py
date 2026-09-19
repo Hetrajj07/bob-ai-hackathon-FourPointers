@@ -139,6 +139,12 @@ def load_context(root_str: str):
     assets_path = data / "assets.json"
     assets = load_json(assets_path) if assets_path.exists() else ASSET_DEFAULTS
     techniques = {x["id"]: x for x in load_json(ref / "techniques.json")}
+    sparta_file = ref / "sparta" / "sparta_techniques.json"
+    if sparta_file.exists():
+        sparta_data = load_json(sparta_file)
+        for st in sparta_data:
+            st["framework"] = "SPARTA"
+            techniques[st["id"]] = st
     groups = load_json(ref / "groups.json")
     edges = load_json(ref / "group_technique_edges.json")
     result = (records, techniques, groups, edges, assets)
@@ -225,6 +231,12 @@ def extract_entities(r: dict[str, Any]) -> list[tuple[str, str]]:
     if r.get("source") == "threat_intel_report":
         for token in IOC_RE.findall(r.get("text", "")):
             ents.append(("ioc", _canonical_entity_value("ioc", token)))
+
+    # Real ThreatFox CTI matches are authoritative IOCs
+    if r.get("threatfox_match"):
+        tf_ioc = r["threatfox_match"].get("ioc")
+        if tf_ioc:
+            ents.append(("ioc", _canonical_entity_value("ioc", tf_ioc)))
 
     return list(dict.fromkeys(ents))
 
@@ -391,6 +403,20 @@ def tag_technique(r: dict[str, Any], techniques: dict[str, Any]) -> tuple[str | 
         return "T1021.002", 0.86, "SMB/admin-share evidence"
     if r.get("protocol", "").upper() == "SSH" or (r.get("dst_port") == 22 and r.get("source") == "network_sensor"):
         return "T1021.004", 0.82, "SSH transport evidence"
+
+    # SPARTA Space-Cyber TTP inference
+    sparta_hint = r.get("sparta_id")
+    if sparta_hint and sparta_hint in techniques:
+        return sparta_hint, 0.95, f"SPARTA Space-Cyber TTP: {techniques[sparta_hint].get('name')}"
+    if ("downlink" in t and "jamming" in t) and "SPARTA-IMP-0001" in techniques:
+        return "SPARTA-IMP-0001", 0.92, "SPARTA RF Downlink Jamming & Signal Degradation"
+    if ("command injection" in t and ("satellite" in t or "telemetry" in t)) and "SPARTA-EX-0001" in techniques:
+        return "SPARTA-EX-0001", 0.93, "SPARTA Command Injection via Telemetry Bus"
+    if ("rogue command" in t or "telemetry hijack" in t) and "SPARTA-C2-0001" in techniques:
+        return "SPARTA-C2-0001", 0.92, "SPARTA Rogue Command Uplink & Telemetry Hijacking"
+    if ("ground station" in t and "compromise" in t) and "SPARTA-IA-0001" in techniques:
+        return "SPARTA-IA-0001", 0.90, "SPARTA Compromise Ground Station Segment"
+
     return None, 0.0, None
 
 
@@ -606,6 +632,9 @@ def score_cluster(cluster: list[dict[str, Any]], techniques: dict[str, Any], edg
     priority_score = round(100 * (0.45 * confidence + 0.25 * severity / 100 + 0.20 * impact / 100 + 0.10 * urgency / 100))
     priority = "P1" if priority_score >= 82 else ("P2" if priority_score >= 65 else ("P3" if priority_score >= 45 else "P4"))
 
+    has_threatfox = any("threatfox_match" in r.get("raw", {}) for r in cluster)
+    has_sparta = any(str(e["technique"]).startswith("SPARTA-") for e in tech_events)
+
     evidence = []
     for r in cluster:
         tid, tc, why = tag_technique(r["raw"], techniques)
@@ -620,6 +649,8 @@ def score_cluster(cluster: list[dict[str, Any]], techniques: dict[str, Any], edg
             "technique_reason": why,
             "source_credibility": r["source_credibility"],
         }
+        if "threatfox_match" in r.get("raw", {}):
+            provenance["threatfox_match"] = r["raw"]["threatfox_match"]
         if any(k == "ioc" for k, _ in r["entities"]):
             provenance["ioc_evidence"] = True
         evidence.append(provenance)
@@ -653,6 +684,8 @@ def score_cluster(cluster: list[dict[str, Any]], techniques: dict[str, Any], edg
         "asset_criticality": impact,
         "assets": asset_hits,
         "source_independence": src_ind,
+        "has_threatfox_corroboration": has_threatfox,
+        "has_sparta_taxonomy": has_sparta,
         "risk_factors": {
             "behavior_confidence": round(tech_conf * 100, 1),
             "attack_flow_coherence": round(flow["score"] * 100, 1),
@@ -660,6 +693,8 @@ def score_cluster(cluster: list[dict[str, Any]], techniques: dict[str, Any], edg
             "source_quality": round(source_quality * 100, 1),
             "ioc_specificity": round(ioc_specificity * 100, 1),
             "contradiction_penalty": round(contradiction_penalty * 100, 1),
+            "has_threatfox_corroboration": has_threatfox,
+            "has_sparta_taxonomy": has_sparta,
         },
         "runbook": remediation_runbook({
             "mission_impact": impact,

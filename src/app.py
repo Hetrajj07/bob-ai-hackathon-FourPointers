@@ -6,6 +6,7 @@ hand the grounded facts to IBM Bob when narrative assistance is useful.
 """
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 
@@ -28,6 +29,8 @@ from src.threatfusion.db import (
     upsert_asset,
 )
 from src.threatfusion.engine import ENGINE_VERSION, analyze, bluf, clear_context_cache, promoted_incidents, remediation_runbook
+from src.threatfusion.normalizer import normalize_otrf, normalize_cicids, auto_normalize
+from src.threatfusion.enrichment import lookup_threatfox, check_cisa_kev, enrich_record
 
 logger = logging.getLogger("threatfusion")
 ROOT = Path(__file__).resolve().parents[1]
@@ -751,8 +754,19 @@ INDEX = r'''<!doctype html>
                   Ingest dynamic threat feeds to test automated candidate clustering, MITRE ATT&amp;CK sub-technique mapping, false-positive reduction, and commander BLUF generation in real time.
                 </p>
                 <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px;">
-                  <button id="sim-sat-btn" class="action-btn">🛰️ Simulate Satellite Telemetry Breach</button>
+                  <button id="sim-sat-btn" class="action-btn">🛰️ SPARTA Space Telemetry</button>
+                  <button id="sim-otrf-btn" class="action-btn">💻 Real OTRF Sysmon Events</button>
+                  <button id="sim-cicids-btn" class="action-btn">🌐 Real CIC-IDS2017 Flows</button>
                   <button id="sim-benign-btn" class="action-btn">🛡️ Ingest Benign Routine Noise</button>
+                </div>
+                <div style="margin-top:10px;margin-bottom:16px;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
+                  <p class="eyebrow" style="margin-bottom:4px;">Live CTI Verification</p>
+                  <h3 style="font-size:13px;margin-bottom:8px;color:var(--text);">ThreatFox IOC &amp; CISA KEV Query</h3>
+                  <div style="display:flex;gap:8px;">
+                    <input id="cti-indicator-input" style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 10px;font-size:12px;" placeholder="e.g. 185.214.66.91 or CVE-2023-34362">
+                    <button id="btn-cti-lookup" class="action-btn primary" style="font-size:12px;padding:6px 14px;">Query Feed</button>
+                  </div>
+                  <div id="cti-lookup-result" style="margin-top:8px;font-size:11px;display:none;"></div>
                 </div>
                 <div style="margin-top:12px;">
                   <label style="font-size:12px;font-weight:700;color:var(--text2);display:block;margin-bottom:6px;">Custom Observation Ingestion (JSON):</label>
@@ -1246,6 +1260,67 @@ INDEX = r'''<!doctype html>
       }
     });
 
+    document.getElementById('sim-otrf-btn').addEventListener('click', async () => {
+      setStatus('Ingesting real OTRF Security Datasets (Sysmon host events)…');
+      try {
+        const res = await fetch('/api/simulate-feed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scenario: 'otrf_attack_chain' }),
+        });
+        const data = await res.json();
+        setStatus(`Ingested ${data.inserted_records} real OTRF Sysmon events with ThreatFox CTI enrichment.`);
+        await boot();
+      } catch (err) {
+        setStatus('OTRF ingestion failed: ' + err.message, true);
+      }
+    });
+
+    document.getElementById('sim-cicids-btn').addEventListener('click', async () => {
+      setStatus('Ingesting real CIC-IDS2017 network flow telemetry…');
+      try {
+        const res = await fetch('/api/simulate-feed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scenario: 'cicids_network_flood' }),
+        });
+        const data = await res.json();
+        setStatus(`Ingested ${data.inserted_records} real CIC-IDS2017 flow observations.`);
+        await boot();
+      } catch (err) {
+        setStatus('CIC-IDS ingestion failed: ' + err.message, true);
+      }
+    });
+
+    document.getElementById('btn-cti-lookup').addEventListener('click', async () => {
+      const q = document.getElementById('cti-indicator-input').value.trim();
+      const resEl = document.getElementById('cti-lookup-result');
+      if (!q) return;
+      resEl.style.display = 'block';
+      resEl.innerHTML = '<span style="color:var(--cyan);">Querying CTI feeds…</span>';
+      try {
+        const endpoint = q.toUpperCase().startsWith('CVE-') 
+          ? `/api/cisa-kev/lookup?cve=${encodeURIComponent(q)}`
+          : `/api/threatfox/lookup?indicator=${encodeURIComponent(q)}`;
+        const res = await fetch(endpoint);
+        const data = await res.json();
+        if (data.found) {
+          const info = data.threat || data.vulnerability;
+          resEl.innerHTML = `<div style="background:var(--surface);padding:8px;border-radius:6px;border-left:3px solid var(--red);">
+            <strong style="color:var(--red);">MATCH FOUND:</strong> ${esc(q)}<br>
+            <span><strong>Source:</strong> ${endpoint.includes('cisa') ? 'CISA KEV Catalog' : 'ThreatFox / abuse.ch'}</span><br>
+            <span><strong>Details:</strong> ${esc(info.threat_type_desc || info.vulnerabilityName || info.shortDescription || 'Known Threat')} (${esc(info.confidence_level ? info.confidence_level + '% confidence' : 'KEV Known Exploited')})</span>
+          </div>`;
+        } else {
+          resEl.innerHTML = `<div style="background:var(--surface);padding:8px;border-radius:6px;border-left:3px solid var(--green);">
+            <strong style="color:var(--green);">NO MATCH:</strong> ${esc(q)} not found in active curated CTI IOC list.
+          </div>`;
+        }
+      } catch (err) {
+        resEl.innerHTML = `<span style="color:var(--red);">Query failed: ${esc(err.message)}</span>`;
+      }
+    });
+
     document.getElementById('btn-ingest-custom').addEventListener('click', async () => {
       const raw = document.getElementById('custom-alert-json').value.trim();
       if (!raw) return;
@@ -1548,49 +1623,128 @@ def reset_demo() -> dict:
     }
 
 
+@app.post("/api/ingest/otrf")
+def ingest_otrf(payload: dict | list[dict]) -> dict:
+    """Ingest real Sysmon / Windows security events in OTRF Security Datasets format."""
+    events = payload if isinstance(payload, list) else [payload]
+    normalized = []
+    for ev in events:
+        norm = normalize_otrf(ev)
+        enriched = enrich_record(norm, root=ROOT)
+        normalized.append(enriched)
+    count = insert_alerts_bulk(normalized)
+    clear_context_cache()
+    analysis = get_dynamic_analysis()
+    return {
+        "status": "ok",
+        "format": "OTRF Security Datasets (Sysmon)",
+        "inserted_count": count,
+        "total_alerts": len(analysis["records"]),
+        "promoted_incidents": len(promoted_incidents(analysis)),
+    }
+
+
+@app.post("/api/ingest/cicids")
+def ingest_cicids(payload: dict | list[dict]) -> dict:
+    """Ingest real network flow telemetry in CIC-IDS2017 format."""
+    flows = payload if isinstance(payload, list) else [payload]
+    normalized = []
+    for fl in flows:
+        norm = normalize_cicids(fl)
+        enriched = enrich_record(norm, root=ROOT)
+        normalized.append(enriched)
+    count = insert_alerts_bulk(normalized)
+    clear_context_cache()
+    analysis = get_dynamic_analysis()
+    return {
+        "status": "ok",
+        "format": "CIC-IDS2017 Flow Telemetry",
+        "inserted_count": count,
+        "total_alerts": len(analysis["records"]),
+        "promoted_incidents": len(promoted_incidents(analysis)),
+    }
+
+
+@app.get("/api/threatfox/lookup")
+def threatfox_lookup(indicator: str = Query(...)) -> dict:
+    """Query local curated ThreatFox / abuse.ch CTI feed for malware IOC metadata."""
+    match = lookup_threatfox(indicator, root=ROOT)
+    if not match:
+        return {"found": False, "indicator": indicator, "message": "No match in curated ThreatFox database"}
+    return {"found": True, "indicator": indicator, "threat": match}
+
+
+@app.get("/api/cisa-kev/lookup")
+def cisa_kev_lookup(cve: str = Query(...)) -> dict:
+    """Query CISA Known Exploited Vulnerabilities catalog."""
+    match = check_cisa_kev(cve, root=ROOT)
+    if not match:
+        return {"found": False, "cve": cve, "message": "Not listed in CISA KEV catalog"}
+    return {"found": True, "cve": cve, "vulnerability": match}
+
+
 @app.post("/api/simulate-feed")
 def simulate_feed(payload: dict) -> dict:
-    """Simulate incoming multi-source attack feeds (Satellite sensor, cyber sensors, SIEM)."""
+    """Simulate incoming multi-source attack feeds (Satellite sensor, cyber sensors, SIEM, OTRF, CIC-IDS)."""
     scenario = payload.get("scenario", "satellite_ground_breach")
     from datetime import datetime, timezone
 
     now_iso = datetime.now(timezone.utc).isoformat()
 
-    if scenario == "satellite_ground_breach":
-        sim_records = [
-            {
-                "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-1",
-                "timestamp": now_iso,
-                "source": "satellite_sensor",
-                "event_type": "downlink_telemetry_anomaly",
-                "host": "SATCOM-GW02",
-                "src_ip": "198.51.100.45",
-                "dst_ip": "10.40.2.1",
-                "detail": "SATCOM ground terminal downlink telemetry anomaly: unexpected telemetry relay command received.",
-            },
-            {
-                "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-2",
-                "timestamp": now_iso,
-                "source": "network_sensor",
-                "event_type": "lateral_remote_session",
-                "protocol": "RDP",
-                "dst_port": 3389,
-                "src_host": "SATCOM-GW02",
-                "dst_host": "SAT-GROUND-01",
-                "detail": "Unauthorized lateral Remote Desktop Protocol session initiated from satellite gateway to satellite ground station.",
-            },
-            {
-                "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-3",
-                "timestamp": now_iso,
-                "source": "endpoint",
-                "event_type": "process_injection",
-                "host": "SAT-GROUND-01",
-                "process": "powershell.exe",
-                "parent_process": "winword.exe",
-                "cmdline": "powershell.exe -enc JABzAGEAdAA9...",
-                "detail": "Encoded PowerShell execution launched by document process targeting satellite command bus.",
-            },
-        ]
+    if scenario in ("satellite_ground_breach", "sparta_satellite_compromise"):
+        sat_file = ROOT / "src" / "data" / "space" / "satellite_demo.json"
+        if sat_file.exists():
+            with sat_file.open(encoding="utf-8") as f:
+                sim_records = [enrich_record(r, root=ROOT) for r in json.load(f)]
+        else:
+            sim_records = [
+                {
+                    "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-1",
+                    "timestamp": now_iso,
+                    "source": "satellite_sensor",
+                    "event_type": "downlink_telemetry_anomaly",
+                    "host": "SATCOM-GW02",
+                    "src_ip": "198.51.100.45",
+                    "dst_ip": "10.40.2.1",
+                    "detail": "SATCOM ground terminal downlink telemetry anomaly: unexpected telemetry relay command received.",
+                },
+                {
+                    "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-2",
+                    "timestamp": now_iso,
+                    "source": "network_sensor",
+                    "event_type": "lateral_remote_session",
+                    "protocol": "RDP",
+                    "dst_port": 3389,
+                    "src_host": "SATCOM-GW02",
+                    "dst_host": "SAT-GROUND-01",
+                    "detail": "Unauthorized lateral Remote Desktop Protocol session initiated from satellite gateway to satellite ground station.",
+                },
+                {
+                    "_id": f"SIM-SAT-{int(datetime.now().timestamp())}-3",
+                    "timestamp": now_iso,
+                    "source": "endpoint",
+                    "event_type": "process_injection",
+                    "host": "SAT-GROUND-01",
+                    "process": "powershell.exe",
+                    "parent_process": "winword.exe",
+                    "cmdline": "powershell.exe -enc JABzAGEAdAA9...",
+                    "detail": "Encoded PowerShell execution launched by document process targeting satellite command bus.",
+                },
+            ]
+    elif scenario == "otrf_attack_chain":
+        otrf_file = ROOT / "src" / "data" / "real" / "otrf_sample.json"
+        if otrf_file.exists():
+            with otrf_file.open(encoding="utf-8") as f:
+                sim_records = [enrich_record(normalize_otrf(ev), root=ROOT) for ev in json.load(f)]
+        else:
+            sim_records = []
+    elif scenario == "cicids_network_flood":
+        cicids_file = ROOT / "src" / "data" / "real" / "cicids_sample.json"
+        if cicids_file.exists():
+            with cicids_file.open(encoding="utf-8") as f:
+                sim_records = [enrich_record(normalize_cicids(fl), root=ROOT) for fl in json.load(f)]
+        else:
+            sim_records = []
     elif scenario == "benign_admin_noise":
         sim_records = [
             {
